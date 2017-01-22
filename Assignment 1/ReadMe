@@ -1,0 +1,7 @@
+This is the Readme file for the first Assignment of CMPS/LING 245 . 
+The folder contains 
+  1. Assignment Description
+  2. Zipped(Raw)Data
+  3. Unzipped(CSV) Data
+  4. Preprocessing ipython notebook ( to be converted to .py when completed) 
+     Work to be done in preprocessing :  remove trailing hashtags 
