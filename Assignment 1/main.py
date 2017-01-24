@@ -1,6 +1,7 @@
 from preprocess import *
 from feature_extraction import *
 from feature_selection import *
+from kmeans import *
 
 def main():
     filename = "clinton-50k.csv"
@@ -34,4 +35,8 @@ def main():
     X = lsa(data_tfidf_plus) #feature set 4
     print X.shape
     
+#    Run kmeans
+    no_clusters = 5
+    labels = run_kmeans(X, no_clusters)
+    print labels
 main()
