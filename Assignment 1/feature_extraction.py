@@ -25,17 +25,17 @@ def vectorize(preprocessed_data_sample, flag):
 #    input=u'content', encoding=u'utf-8', decode_error=u'strict', strip_accents=None, lowercase=True, preprocessor=None, tokenizer=None, analyzer=u'word', stop_words=None, token_pattern=u'(?u)\b\w\w+\b', ngram_range=(1, 1), max_df=1.0, min_df=1, max_features=None, vocabulary=None, binary=False, dtype=<type 'numpy.int64'>, norm=u'l2', use_idf=True, smooth_idf=True, sublinear_tf=False
 
     if flag:
-        vectorizer = TfidfVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, vocabulary = None, ngram_range=(1,1), strip_accents=None, max_features = no_features)#, ngram_range=(2,2)) 
+        vectorizer = TfidfVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, vocabulary = None, ngram_range=(1,1), strip_accents=None, max_features = no_features)#, ngram_range=(2,2))
     else:
         vectorizer = CountVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, vocabulary = None, ngram_range=(1,1), strip_accents=None, max_features = no_features)
     #vectorizer = CountVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, ngram_range=(2,2), max_features = no_features)
     # fit_transform() does two functions: First, it fits the model
     # and learns the vocabulary; second, it transforms our training data
-    # into feature vectors. The input to fit_transform should be a list of 
+    # into feature vectors. The input to fit_transform should be a list of
     # strings.
     train_data_features = vectorizer.fit_transform(preprocessed_data_sample)
 
-    # Numpy arrays are easy to work with, so convert the result to an 
+    # Numpy arrays are easy to work with, so convert the result to an
     # array
     train_data_features = train_data_features.toarray()
     return [train_data_features, vectorizer, no_features]
@@ -50,7 +50,7 @@ def tokenize_and_stopwords(data_sample):
     #print data_sample
     #tokenize and remove stop words
     return [[i for i in word_tokenize(sentence) if i not in stop] for sentence in data_sample]
-    
+
 def stemmer(preprocessed_data_sample):
     print "stemming "
     #Create a new Porter stemmer.
