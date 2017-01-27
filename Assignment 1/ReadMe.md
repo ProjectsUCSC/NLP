@@ -17,3 +17,13 @@ Libraries required:
 To run code:
 ====================
 python main.py
+
+Input files:
+====================
+clinton-50k.csv
+trump-50k.csv
+
+Output files:
+====================
+clinton-50k-result.csv
+trump-50k-result.csv
