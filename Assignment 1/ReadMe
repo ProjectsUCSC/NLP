@@ -3,18 +3,13 @@ The folder contains
   1. Assignment Description
   2. Zipped(Raw)Data
   3. Unzipped(CSV) Data
-  4. Preprocessing ipython notebook ( to be converted to .py when completed) 
-     Work to be done in preprocessing :  remove trailing hashtags 
-     
-  File Description
-  preprocess.py
-  The following file removes
-  1. HTMLs
-  2. Trailing HashTags 
-  3. Any mentions,urls 
+  4. Source code
+  5. result files
+  6. Qualitative Analysis
   
-  usage :  
-  import preprocess as pp
-  filename="filename.csv" #assumes .py file and data files are in the same directory . Will be modified later 
-  df = pp.preprocess(filename) #dataframe
-  print df['text'] #tweetlist
+Libraries required:
+1) NLTK
+2) scikit-learn
+
+To run code:
+python main.py
