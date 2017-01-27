@@ -1,5 +1,5 @@
-This is the Readme file for the first Assignment of CMPS/LING 245 . 
-The folder contains 
+#This is the Readme file for the first Assignment of CMPS/LING 245 . 
+#The folder contains 
   1. Assignment Description
   2. Zipped(Raw)Data
   3. Unzipped(CSV) Data
@@ -7,9 +7,9 @@ The folder contains
   5. result files
   6. Qualitative Analysis
   
-Libraries required:
+#Libraries required:
 1) NLTK
 2) scikit-learn
 
-To run code:
+#To run code:
 python main.py
