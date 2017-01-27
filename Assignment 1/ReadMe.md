@@ -22,6 +22,7 @@ Input files:
 ====================
 clinton-50k.csv
 trump-50k.csv
+Specified in the main() method
 
 Output files:
 ====================
