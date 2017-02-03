@@ -26,7 +26,7 @@ def tokenize_and_stopwords(data_sample):
    data_sample = data_sample.str.replace("[^a-zA-Z ]", " ")#, " ")
    #print data_sample
    #tokenize and remove stop words
-   return [[i for i in sentence.split() if i not in stop] for sentence in data_sample]
+   return [(" ").join([i for i in sentence.split() if i not in stop]) for sentence in data_sample]
 
 
 # In[10]:
@@ -47,11 +47,11 @@ def removeMention(tweet):
 # In[11]:
 
 def spellCheck(word):
-    d = enchant.Dict()
+#    d = enchant.Dict()
 
-    if d.check(word) == False:
-        word =  d.suggest(word)[0] if d.suggest(word) else ""
-    #print word
+#    if d.check(word) == False:
+#        word =  d.suggest(word)[0] if d.suggest(word) else ""
+#    #print word
     return word
 
 
@@ -59,10 +59,10 @@ def spellCheck(word):
 # In[ ]:
 def preprocess(filename):
 	#filename = "Homework2_data.csv"
-	df =readData(filename)
-	df['text']=df['Tweet_text'].apply(cleanhtml).apply(cleanUrl).apply(removeMention);
+	df = readData(filename)
+	df['text'] = df['Tweet_text'].apply(cleanhtml).apply(cleanUrl).apply(removeMention);
 	#df['text'] = df['text'].apply(spellCheck)
-	#df['text'] = tokenize_and_stopwords(df['text'])
+	df['text'] = tokenize_and_stopwords(df['text'])
 	
 	return df
 
