@@ -2,11 +2,10 @@
 
 import pandas as pd
 import os
-import nltk
-from nltk import word_tokenize
 from nltk.corpus import stopwords
 import re
 import enchant
+
 
 
 # In[2]:
@@ -58,20 +57,15 @@ def spellCheck(word):
 
 
 # In[ ]:
-def preprocess_btm(filename):
+def preprocess(filename):
 	#filename = "Homework2_data.csv"
 	df =readData(filename)
 	df['text']=df['Tweet_text'].apply(cleanhtml).apply(cleanUrl).apply(removeMention);
 	#df['text'] = df['text'].apply(spellCheck)
 	#df['text'] = tokenize_and_stopwords(df['text'])
-	path= create_input_file(df)
-	return path
+	
+	return df
 
-def create_input_file(df):
-	cwd = os.getcwd()
-	path = cwd + "/" + "input.txt"
- 	print path;
-	df.to_csv(path,header=None, index=None, sep =' ', mode = 'a', columns =["text"])
-	return path
+
 
 
