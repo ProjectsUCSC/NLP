@@ -23,8 +23,8 @@ Topic Modelling for Twitter
   
  How to run :
  ==========================
-  a) Without changing parameters :   python main.py
-  b) With different number of topics :  python main.py <number_of_topics>
+ 1.  Without changing parameters :   python main.py
+ 2.  With different number of topics :  python main.py <number_of_topics>
   
   Currently the code expects the OnlineBTM code to present as a directory at head level .  
   To change the location/name of the directory , modify btm.py
