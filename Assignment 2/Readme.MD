@@ -1,33 +1,30 @@
 Topic Modelling for Twitter 
 ========================================
 
- Python Files : 
+Python Files : 
 ========================
-
- 1. Preprocess.py
- 2. TopicModel.py
- 3. Main.py
+1. Preprocess.py
+2. TopicModel.py
+3. Main.py
  
- 
- Supporting Files (for topic modelling):
+Supporting Files (for topic modelling):
 =========================
+1. Btm.py
+2. Lda.py
  
- 1. Btm.py
- 2. Lda.py
- 
- Output files:
+Output files:
 ===========================
- 1. btm.txt
- 2. lda.txt
+1. btm.txt
+2. lda.txt
  
- Dependencies :
+Dependencies :
 =========================
-  OBTM code (from github)
+OBTM code (from github)
   
- How to run :
- ==========================
- 1.  Without changing parameters :   python main.py
- 2.  With different number of topics :  python main.py <number_of_topics>
+How to run :
+==========================
+1.  Without changing parameters :   python main.py
+2.  With different number of topics :  python main.py <number_of_topics>
   
   Currently the code expects the OnlineBTM code to present as a directory at head level .  
   To change the location/name of the directory , modify btm.py
