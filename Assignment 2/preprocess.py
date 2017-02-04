@@ -40,9 +40,9 @@ def cleanUrl(tweet):
     return tweet;
 def removeMention(tweet):
     tweet = tweet.replace("rt@","").rstrip()
+    tweet = tweet.replace("rt","").rstrip()
     tweet = tweet.replace("@","").rstrip()
     return tweet;
-
 
 # In[11]:
 

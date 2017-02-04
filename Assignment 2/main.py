@@ -15,9 +15,9 @@ def main():
     
     print "Most likely topics"
 #    few_words = np.array(range(1,11))
-    words = model.get_term_topics(0)
+    words = model.get_term_topics(19)
     print words
-#    print dictionary[1]
+    print dictionary[19]
     for pair in words:
         print "word - > ", dictionary[pair[0]], pair
     
