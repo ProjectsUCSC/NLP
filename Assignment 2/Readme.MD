@@ -6,18 +6,18 @@ Python Files :
  2. TopicModel.py
  3. Main.py
  
- Supporting Files :
- =========================
+ Supporting Files (for topic modelling):
+=========================
  1. Btm.py
  2. Lda.py
  
  Output files:
- ===========================
+===========================
  1. btm.txt
  2. lda.txt
  
  Dependencies :
- =========================
+=========================
   OBTM code (from github)
   
  How to run :
