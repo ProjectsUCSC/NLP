@@ -1,4 +1,4 @@
-def lda_tm(texts):
+def lda_tm(texts, no_topics):
 
     import gensim
     from gensim import corpora, models
@@ -18,8 +18,9 @@ def lda_tm(texts):
 
     corpus = [dictionary.doc2bow(text) for text in texts]
 #    print corpus
-    model = gensim.models.ldamodel.LdaModel(corpus, id2word=dictionary, num_topics=3, update_every=1, passes=1)
-    topics = model.show_topics(num_topics=3, num_words=10)
+    model = gensim.models.ldamodel.LdaModel(corpus, id2word=dictionary, num_topics=no_topics, update_every=1, passes=1)
+    print "number of topics = ", no_topics
+    topics = model.show_topics(num_topics=no_topics, num_words=50)
     print "These are our topics\n", topics
     
     return [dictionary, model]
