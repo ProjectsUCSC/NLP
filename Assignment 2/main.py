@@ -6,7 +6,7 @@ def main(num_topics = 5, top_words = 35):
     filename = "Homework2_data.csv"
     df = preprocess(filename)
 
-#    tm.run_lda_tm(df["text"], num_topics, top_words)
+    tm.run_lda_tm(df["text"], num_topics, top_words)
     tm.run_btm_tm(filename, df, num_topics, top_words)
 
 if __name__ == '__main__':
