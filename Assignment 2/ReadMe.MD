@@ -1,6 +1,11 @@
 Topic Modelling for Twitter 
 ========================================
 
+Pre-requisite python libraries :
+================================
+pip install pyenchant
+pip install gensim
+
 Python Files : 
 ========================
 1. preprocess.py
