@@ -5,6 +5,7 @@ Pre-requisite python libraries :
 ================================
 1. pip install pyenchant
 2. pip install gensim
+3. pip install numpy
 
 Python Files : 
 ========================
