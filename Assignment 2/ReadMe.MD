@@ -19,10 +19,10 @@ Output files:
  
 Dependencies :
 =========================
-NLTK
-Gensim
-Numpy
-OBTM code (use the code provided, not the one from github)
+1. NLTK
+2. Gensim
+3. Numpy
+4. OBTM code (use the code provided, not the one from github)
   
 How to run :
 ==========================
