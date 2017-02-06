@@ -3,14 +3,14 @@ Topic Modelling for Twitter
 
 Python Files : 
 ========================
-1. Preprocess.py
-2. TopicModel.py
-3. Main.py
+1. preprocess.py
+2. topicModel.py
+3. main.py
  
 Supporting Files (for topic modelling):
 =========================
-1. Btm.py
-2. Lda.py
+1. btm.py
+2. lda.py
  
 Output files:
 ===========================
