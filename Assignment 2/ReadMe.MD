@@ -24,7 +24,7 @@ OBTM code (use the code provided, not the one from github)
 How to run :
 ==========================
 1.  Without changing parameters :   python main.py
-2.  With different number of topics :  python main.py <number_of_topics> <number_of_labels>
+2.  With different number of topics :  python main.py number_of_topics number_of_labels
   
   Currently the code expects the OnlineBTM code to present as a directory at head level .  
   To change the location/name of the directory , modify btm.py
