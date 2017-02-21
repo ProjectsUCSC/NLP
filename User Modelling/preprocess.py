@@ -14,8 +14,7 @@ import math
 
 def readData(filename1, filename2):
     cwd = os.getcwd()
-
-
+    req_attributes = ['tweet_id', 'topic', 'sentiment', 'tweet', 'user_id', 'followers_count', 'statuses_count', 'description', 'friends_count', 'location']
     path = cwd + "/data/" + filename1;
     tweet_df = pd.read_csv(path, sep='\t');
 #    user_df["tweet_id"] = int(user_df["tweet_id"])
@@ -50,7 +49,7 @@ def readData(filename1, filename2):
 #    k = user_df.groupby(['user_id'])
 #    print k
     data = data.dropna(subset=['user_id'])
-    return data
+    return data[req_attributes]
 
 
 def tokenize_and_stopwords(data_sample):
@@ -131,6 +130,7 @@ def preprocess(filename1, filename2):
 #	df['text'] = tokenize_and_stopwords(df['text'])
 #	return df
 	print Counter(list(df["user_id"]))
+	print list(df) 
 	
 filename1 = "twitter-2016dev-CE-output.txt_semeval_tweets.txt"
 filename2 = "twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
