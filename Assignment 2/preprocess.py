@@ -27,7 +27,7 @@ def tokenize_and_stopwords(data_sample):
     except:
         words = []
     print "words", words
-    abb_dict = pickle.load(open("abbreviations", "r"))
+#    abb_dict = pickle.load(open("abbreviations", "r"))
     stop = stopwords.words('english') + words #list(string.punctuation) + ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     #Use only characters from reviews
     data_sample = data_sample.str.replace("[^a-zA-Z ]", " ")#, " ")
@@ -35,10 +35,10 @@ def tokenize_and_stopwords(data_sample):
     #print data_sample
     #tokenize and remove stop words
     
-    for i in range(len(data_sample)):
-        for j in data_sample[i].split():
-            if i == abb_dict.keys():
-                data_sample[i] = data_sample[i].replace(i, abb_dict[i])
+#    for i in range(len(data_sample)):
+#        for j in data_sample[i].split():
+#            if i == abb_dict.keys():
+#                data_sample[i] = data_sample[i].replace(i, abb_dict[i])
                 
     return [(" ").join([i for i in sentence.split() if i not in stop]) for sentence in data_sample]
 

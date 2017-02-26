@@ -62,6 +62,9 @@ def readData(filename1, filename2):
 
 
 def tokenize_and_stopwords(data_sample):
+
+    print type(data_sample)
+    print len(data_sample)
     #data_sample = list(data_sample)
     #Get all english stopwords
     try:
@@ -79,10 +82,10 @@ def tokenize_and_stopwords(data_sample):
     #print data_sample
     #tokenize and remove stop words
     
-    for i in range(len(data_sample)):
-        for j in data_sample[i].split():
-            if i == abb_dict.keys():
-                data_sample[i] = data_sample[i].replace(i, abb_dict[i])
+#    for i in range(len(data_sample)):
+#        for j in data_sample[i].split():
+#            if i == abb_dict.keys():
+#                data_sample[i] = data_sample[i].replace(i, abb_dict[i])
                 
     return [(" ").join([i for i in sentence.split() if i not in stop]) for sentence in data_sample]
 
@@ -134,22 +137,36 @@ def preprocess(filename1, filename2):
     print "from joined data\n", Counter(list(df["user_id"])).most_common(50)
     
     indices = []
-    topics = set(df["topic"])
+    
+#    df['tweet'] = df['tweet'].apply(cleanhtml).apply(cleanUrl).apply(removeMention).apply(removeTrailingHash);
+
+    df['tweet'] = df['tweet'].apply(cleanhtml).apply(cleanUrl)#.apply(removeTrailingHash);
+    df['tweet'] = tokenize_and_stopwords(df['tweet'])
     data = DataFrame(df.groupby('topic')['tweet'].apply(list)).reset_index()
 
-#    print topics
-#    for i in range(len(data)):
-#        data[i] = (" ").join(data[i])
-#        print data[i], len(data[i].split())
-    
-#    data = pd.DataFrame(data)
     for i in range(len(data)):
         data['tweet'][i] = " ".join(data['tweet'][i])
 
-    print data#['tweet'][0]
+#    print data["topic"][0],"\n", (data['tweet'][0])
+    try:
+        word_dict = pickle.load(open("word_dict", "r"))
+    except:
+        tweets = ""
+        for i in data['tweet']:
+            tweets += str(i)
+        
+        word_dict = {}
+        topics = list(data["topic"])
+            
+        tweets = tweets.split()
+        for word in tweets:
+            word_dict[word] = []
+            for i in range(len(topics)):
+                if word in data["tweet"][i]:
+                    word_dict[word].append(topics[i])        
+        pickle.dump(word_dict, open("word_dict", "wb"))
     
- 
-	
+    print (word_dict)	
 filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
 filename2 = "users.txt"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
 preprocess(filename1, filename2)
