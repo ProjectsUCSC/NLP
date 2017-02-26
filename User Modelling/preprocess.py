@@ -166,7 +166,7 @@ def preprocess(filename1, filename2):
                     word_dict[word].append(topics[i])        
         pickle.dump(word_dict, open("word_dict", "wb"))
     
-    print (word_dict)	
+    print "the word 'election' is present in", (word_dict['election'])	
 filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
 filename2 = "users.txt"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
 preprocess(filename1, filename2)
