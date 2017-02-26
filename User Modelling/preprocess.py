@@ -22,42 +22,19 @@ def readData(filename1, filename2):
     
     tweet_df = tweet_df.drop_duplicates(['tweet_id'])
     tweet_df = tweet_df[tweet_req_attributes]
-#    print Counter(list(tweet_df["tweet_id"])).most_common(50)
-#    user_df["tweet_id"] = int(user_df["tweet_id"])
 
     path = cwd + "/data/" + filename2;
     user_df = pd.read_csv(path, sep='\t')
     user_df = user_df.dropna(subset=['user_id'])
     user_df = user_df[user_req_attributes]
     
-#    print Counter(list(user_df["user_id"]))
-#    print tweet_df["tweet"][np.array(tweet_df['tweet_id'])]# == 641616155619258368]
-
-#    data = pd.merge(tweet_df, user_df, on="tweet_id")
-#    tweet_ids = np.array((user_df["tweet_id"]))
-#    tweet_ids_extra = np.array((tweet_df["tweet_id"]))
-#    length = len(tweet_df)
-    
-#    print "selecting"
-#    indices = np.array([i for i in range(length) if tweet_ids_extra[i] in tweet_ids])
-#    tweet_df = tweet_df[indices]
-#    print "selected"
-    
-#    print tweet_df
-#    print user_df
     data = tweet_df.merge(user_df, left_on="tweet_id", right_on="tweet_id", how="inner")
-#    print "length", len(data)
-#    print len(user_df)
-#    print user_df["user_id"]
-#    k = user_df.groupby(['user_id'])
-#    print k
     data = data.drop_duplicates(['tweet_id'])
     data = data.dropna(subset=['user_id', 'tweet'])
     data = data.dropna(subset=['user_id'])
     print len(user_df), len(tweet_df), len(data)
     
     print "From user data\n", Counter(list(data["user_id"])).most_common(50)
-#    data = data.drop_duplicates(['tweet_id'])
     return data[req_attributes]
 
 
@@ -65,7 +42,6 @@ def tokenize_and_stopwords(data_sample):
 
     print type(data_sample)
     print len(data_sample)
-    #data_sample = list(data_sample)
     #Get all english stopwords
     try:
         words = open("common_words.txt", "r").readlines()
@@ -79,42 +55,23 @@ def tokenize_and_stopwords(data_sample):
     #Use only characters from reviews
     data_sample = data_sample.str.replace("[^a-zA-Z ]", " ")#, " ")
     data_sample = data_sample.str.lower()
-    #print data_sample
-    #tokenize and remove stop words
-    
-#    for i in range(len(data_sample)):
-#        for j in data_sample[i].split():
-#            if i == abb_dict.keys():
-#                data_sample[i] = data_sample[i].replace(i, abb_dict[i])
                 
     return [(" ").join([i for i in sentence.split() if i not in stop]) for sentence in data_sample]
-
-# In[10]:
 
 def cleanhtml(tweet):
       cleanr = re.compile('<.*?>')
       cleantext = re.sub(cleanr, '', tweet)
       return cleantext
+
 def cleanUrl(tweet):
     tweet= re.sub(r"http\S+", "",  tweet)
     return tweet;
+
 def removeMention(tweet):
     tweet = tweet.replace("rt@","").rstrip()
     tweet = tweet.replace("rt ","").rstrip()
     tweet = tweet.replace("@","").rstrip()
     return tweet;
-
-# In[11]:
-
-def spellCheck(word):
-#    d = enchant.Dict()
-
-#    if d.check(word) == False:
-#        word =  d.suggest(word)[0] if d.suggest(word) else ""
-#    #print word
-    return word
-
-
 
 def stemmer(preprocessed_data_sample):
     print "stemming "
@@ -130,14 +87,11 @@ def stemmer(preprocessed_data_sample):
             preprocessed_data_sample[i] = preprocessed_data_sample[i].replace(preprocessed_data_sample[i], " ".join([str(word) for word in preprocessed_data_sample[i].split()]))
     return preprocessed_data_sample
     
-# In[ ]:
 def preprocess(filename1, filename2):
     #filename = "Homework2_data.csv"
     df = readData(filename1, filename2)
     print "from joined data\n", Counter(list(df["user_id"])).most_common(50)
-    
     indices = []
-    
 #    df['tweet'] = df['tweet'].apply(cleanhtml).apply(cleanUrl).apply(removeMention).apply(removeTrailingHash);
 
     df['tweet'] = df['tweet'].apply(cleanhtml).apply(cleanUrl)#.apply(removeTrailingHash);
@@ -146,8 +100,10 @@ def preprocess(filename1, filename2):
 
     for i in range(len(data)):
         data['tweet'][i] = " ".join(data['tweet'][i])
-
-#    print data["topic"][0],"\n", (data['tweet'][0])
+    
+    topics = list(data["topic"])
+    
+#    Word topic mapping
     try:
         word_dict = pickle.load(open("word_dict", "r"))
     except:
@@ -156,8 +112,6 @@ def preprocess(filename1, filename2):
             tweets += str(i)
         
         word_dict = {}
-        topics = list(data["topic"])
-            
         tweets = tweets.split()
         for word in tweets:
             word_dict[word] = []
@@ -166,7 +120,83 @@ def preprocess(filename1, filename2):
                     word_dict[word].append(topics[i])        
         pickle.dump(word_dict, open("word_dict", "wb"))
     
-    print "the word 'election' is present in", (word_dict['election'])	
-filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
-filename2 = "users.txt"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
-preprocess(filename1, filename2)
+    print "the word 'election' is present in", (word_dict['election'])
+    print len(word_dict)
+#    Word model
+    model = train_cnn(word_dict, topics)
+    pickle.dump(model, open("model", "wb"))
+
+def train_cnn(word_dict, topics):
+
+    from keras.models import Sequential
+    from keras.layers import Dense, Dropout, Activation, Flatten
+    from keras.layers import Convolution1D, MaxPooling1D, Convolution2D, MaxPooling2D
+    from keras.optimizers import SGD
+    
+    X_train = []
+    Y_train = []
+    
+#    Encoding X_train and Y_train
+    vocab = word_dict.keys()
+    for i in range(len(vocab)):
+        c = np.zeros(len(topics))
+        c_x = np.zeros(len(vocab))
+        locations = np.array([i for i in range(len(topics)) if topics[i] in word_dict[vocab[i]]])
+        c_x[i] = 1
+        try:#buggy, fews words aren't found in any topics, weird, space removed by mistake.'
+            c[locations] = 1
+            
+            X_train.append(c_x)
+            Y_train.append(c)
+#            print locations
+        except:
+            print "l is", locations, word 
+         #This could be buggy
+    
+    print type(X_train[0])
+    print (X_train[0]).shape
+    return
+    
+    ####CNN for word representation -resulting in a error, should be fixed
+    X_train = np.array([[sample] for sample in X_train])
+    model = Sequential()
+    # input: 100x100 images with 3 channels -> (3, 100, 100) tensors.
+    # this applies 32 convolution filters of size 3x3 each.
+#    model.add(Dense(output_dim=len(X_train[0]), input_dim=len(X_train[0])))
+#    model.add(Activation("relu"))
+    model.add(Convolution1D(64, 3, border_mode='valid', input_dim=len(X_train[0])))
+#    model.add(Convolution2D(32, 3, 1, border_mode='valid', input_shape=(len(X_train[0]), 1)))
+    model.add(Activation('relu'))
+#    model.add(Convolution1D(32, 3))
+#    model.add(Activation('relu'))
+#    model.add(MaxPooling1D(pool_length=2))
+#    model.add(Dropout(0.25))
+
+#    model.add(Convolution1D(64, 3, border_mode='valid'))
+#    model.add(Activation('relu'))
+#    model.add(Convolution1D(64, 3))
+#    model.add(Activation('relu'))
+#    model.add(MaxPooling1D(pool_length=2))
+#    model.add(Dropout(0.25))
+
+#    model.add(Flatten())
+    # Note: Keras does automatic shape inference.
+    model.add(Dense(256))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.5))
+
+    model.add(Dense(len(topics)))
+    model.add(Activation('softmax'))
+
+    sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd)
+
+    model.fit(X_train, Y_train, batch_size=32, nb_epoch=1)
+    return model
+
+def main():
+    filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
+    filename2 = "users.txt"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
+    preprocess(filename1, filename2)
+    
+main()
