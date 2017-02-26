@@ -14,17 +14,21 @@ import math
 
 def readData(filename1, filename2):
     cwd = os.getcwd()
-    req_attributes = ['tweet_id', 'topic', 'sentiment', 'tweet', 'user_id', 'followers_count', 'statuses_count', 'description', 'friends_count', 'location']
+    req_attributes = ['tweet_id', 'topic', 'sentiment', 'tweet', 'user_id']#, 'followers_count', 'statuses_count', 'description', 'friends_count', 'location']
+    user_req_attributes = ['tweet_id', 'user_id']#, 'followers_count', 'statuses_count', 'description', 'friends_count', 'location']
+    tweet_req_attributes = ['tweet_id', 'topic', 'sentiment', 'tweet']
     path = cwd + "/data/" + filename1;
     tweet_df = pd.read_csv(path, sep='\t');
     
     tweet_df = tweet_df.drop_duplicates(['tweet_id'])
+    tweet_df = tweet_df[tweet_req_attributes]
 #    print Counter(list(tweet_df["tweet_id"])).most_common(50)
 #    user_df["tweet_id"] = int(user_df["tweet_id"])
 
     path = cwd + "/data/" + filename2;
     user_df = pd.read_csv(path, sep='\t')
     user_df = user_df.dropna(subset=['user_id'])
+    user_df = user_df[user_req_attributes]
     
 #    print Counter(list(user_df["user_id"]))
 #    print tweet_df["tweet"][np.array(tweet_df['tweet_id'])]# == 641616155619258368]
@@ -41,11 +45,14 @@ def readData(filename1, filename2):
     
 #    print tweet_df
 #    print user_df
-    data = tweet_df.merge(user_df, left_on="tweet_id", right_on="tweet_id", how="outer")
+    data = tweet_df.merge(user_df, left_on="tweet_id", right_on="tweet_id", how="inner")
+#    print "length", len(data)
 #    print len(user_df)
 #    print user_df["user_id"]
 #    k = user_df.groupby(['user_id'])
 #    print k
+    data = data.drop_duplicates(['tweet_id'])
+    data = data.dropna(subset=['user_id', 'tweet'])
     data = data.dropna(subset=['user_id'])
     print len(user_df), len(tweet_df), len(data)
     
@@ -122,20 +129,25 @@ def stemmer(preprocessed_data_sample):
     
 # In[ ]:
 def preprocess(filename1, filename2):
-	#filename = "Homework2_data.csv"
-	df = readData(filename1, filename2)
-	print "from joined data\n", Counter(list(df["user_id"])).most_common(50)
-#	df["user_id"] = df[df["tweet_id"] != 'Nan']
-#	print df["user_id"]
-#	df['text'] = df['Tweet_text'].apply(cleanhtml).apply(cleanUrl).apply(removeMention);#.apply(stemmer);
-##	df['text'] = df['text'].apply(spellCheck)
-##	df['text'] = stemmer(df["text"])
-#	df['text'] = tokenize_and_stopwords(df['text'])
-#	return df
-#	print df["tweets"][df[]]
-#	print Counter(list(df["tweet_id"]))
-#	print list(df)
+    #filename = "Homework2_data.csv"
+    df = readData(filename1, filename2)
+    print "from joined data\n", Counter(list(df["user_id"])).most_common(50)
+    
+    indices = []
+    topics = set(df["topic"])
+    data = DataFrame(df.groupby('topic')['tweet'].apply(list)).reset_index()
 
+#    print topics
+#    for i in range(len(data)):
+#        data[i] = (" ").join(data[i])
+#        print data[i], len(data[i].split())
+    
+#    data = pd.DataFrame(data)
+    for i in range(len(data)):
+        data['tweet'][i] = " ".join(data['tweet'][i])
+
+    print data#['tweet'][0]
+    
  
 	
 filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
