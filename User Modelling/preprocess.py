@@ -9,6 +9,16 @@ import numpy as np
 import cPickle as pickle
 from collections import Counter
 import math
+import signal
+
+
+X_train = []
+Y_train = []
+
+def handler(signum, frame):
+    print 'Ctrl+Z pressed'
+    assert False
+signal.signal(signal.SIGTSTP, handler)
 
 # In[2]:
 
@@ -128,145 +138,173 @@ def preprocess(filename1, filename2):
 
 def train_cnn(word_dict, topics):
 
-    from keras.models import Sequential
-    from keras.layers import Dense, Dropout, Activation, Flatten
-    from keras.layers import Convolution1D, MaxPooling1D, Convolution2D, MaxPooling2D
-    from keras.optimizers import SGD
-    from keras import backend as K
-    K.set_image_dim_ordering('th')
-    
-    X_train = []#np.array([])
-    Y_train = []#np.array([])
-    
-#    Encoding X_train and Y_train
-    vocab = word_dict.keys()
-    print "before"
-    for i in range(len(vocab)):
-        c = np.zeros(len(topics))
-        c_x = np.zeros(len(vocab))
-        locations = np.array([i for i in range(len(topics)) if topics[i] in word_dict[vocab[i]]])
-        c_x[i] = 1
-        try:#buggy, fews words aren't found in any topics, weird, space removed by mistake.'
-            c[locations] = 1
+    try:
+        from keras.models import Sequential
+        from keras.layers import Dense, Dropout, Activation, Flatten
+        from keras.layers import Convolution1D, MaxPooling1D, Convolution2D, MaxPooling2D
+        from keras.optimizers import SGD
+        from keras import backend as K
+        from scipy.sparse import csr_matrix
+        K.set_image_dim_ordering('th')
+        
+#        X_train = []#np.array([])
+#        Y_train = []#np.array([])
+        global X_train, Y_train
+        
+    #    Encoding X_train and Y_train
+        vocab = word_dict.keys()
+        print "before"
+        for i in range(len(vocab)):
+            c = np.zeros(len(topics))
+            c_x = np.zeros(len(vocab))
+            locations = np.array([i for i in range(len(topics)) if topics[i] in word_dict[vocab[i]]])
+            c_x[i] = 1
+            try:#buggy, fews words aren't found in any topics, weird, space removed by mistake.'
+                c[locations] = 1
+                
+                X_train.append(c_x)# = np.append(X_train, c_x)
+                Y_train.append(c)# = np.append(Y_train, c)
+    #            print locations
+            except:
+                print "l is", locations, word 
+             #This could be buggy
+        
             
-            X_train.append(c_x[0:100])# = np.append(X_train, c_x)
-            Y_train.append(c)# = np.append(Y_train, c)
-#            print locations
-        except:
-            print "l is", locations, word 
-         #This could be buggy
-    
-    
-#    print len(X_train)
-#    print X_train[0]
-#    Main line
-    X_train = np.array(X_train).astype('float32')
-    Y_train = np.array(Y_train).astype('float32')
-    print "after"
-    X_train = X_train.reshape(32088, 1, 100, 1)#(len(X_train), 1, len(X_train[0]), 1))
-    print X_train.shape
-#    print "first shape", X_train.shape
-    print X_train[0]
-#    Trial
-#    X_train = np.random.rand(32088, 128).astype("float32")
-#    
-#    X_train = X_train.reshape((32088, 1, 128, 1))
-#    Y_train = np.array(Y_train)
-#    print "second shape", X_train.shape
-#    print X_train[0]
-    
-# output labels should be one-hot vectors - ie,
-# 0 -> [0, 0, 1]
-# 1 -> [0, 1, 0]
-# 2 -> [1, 0, 0]
-# this operation changes the shape of y from (32088,1) to (32088, 3)
-
-#    y = np_utils.to_categorical(y)
-
-    # define a CNN
-    # see http://keras.io for API reference
-#    print 
-#    Y_train = np.zeros()
-
-    print "Shape sir is", Y_train.shape
-    cnn = Sequential()
-#    cnn.add(Convolution2D(64, 3, 1,
-#        border_mode="same",
-#        activation="relu",
-#        input_shape=(1, 128, 1)))
-    
-    cnn.add(Convolution2D(64, 3, 1,
-        border_mode="same",
-        activation="relu",
-        input_shape=(1, 100, 1)))
-    cnn.add(Convolution2D(64, 3, 1, border_mode="same", activation="relu"))
-    cnn.add(MaxPooling2D(pool_size=(2, 1)))
-
-    cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
-    cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
-    cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
-    cnn.add(MaxPooling2D(pool_size=(2, 1)))
+    #    print len(X_train)
+    #    print X_train[0]
+    #    Main line
+    #    X_train = csr_matrix(np.array(X_train))#
+        X_train = np.array(X_train).astype('float32')
+    #    Y_train = csr_matrix(Y_train)#
+        Y_train = np.array(Y_train).astype('float32')
+        print "after"
+        X_train = X_train.reshape(32088, 1, 32088, 1)#(len(X_train), 1, len(X_train[0]), 1))
+        print X_train.shape
+    #    print "first shape", X_train.shape
+        print X_train[0]
+    #    Trial
+    #    X_train = np.random.rand(32088, 128).astype("float32")
+    #    
+    #    X_train = X_train.reshape((32088, 1, 128, 1))
+    #    Y_train = np.array(Y_train)
+    #    print "second shape", X_train.shape
+    #    print X_train[0]
         
-    cnn.add(Convolution2D(256, 3, 1, border_mode="same", activation="relu"))
-    cnn.add(Convolution2D(256, 3, 1, border_mode="same", activation="relu"))
-    cnn.add(Convolution2D(256, 3, 1, border_mode="same", activation="relu"))
-    cnn.add(MaxPooling2D(pool_size=(2, 1)))
+    # output labels should be one-hot vectors - ie,
+    # 0 -> [0, 0, 1]
+    # 1 -> [0, 1, 0]
+    # 2 -> [1, 0, 0]
+    # this operation changes the shape of y from (32088,1) to (32088, 3)
+
+    #    y = np_utils.to_categorical(y)
+
+        # define a CNN
+        # see http://keras.io for API reference
+    #    print 
+    #    Y_train = np.zeros()
+
+        print "Shape sir is", Y_train.shape
+        cnn = Sequential()
+    #    cnn.add(Convolution2D(64, 3, 1,
+    #        border_mode="same",
+    #        activation="relu",
+    #        input_shape=(1, 128, 1)))
         
-    cnn.add(Flatten())
-    cnn.add(Dense(1024, activation="relu"))
-    cnn.add(Dropout(0.5))
-#    cnn.add(Dense(3, activation="softmax"))
-    cnn.add(Dense(len(topics), activation="softmax"))
-    # define optimizer and objective, compile cnn
+        cnn.add(Convolution2D(64, 3, 1,
+            border_mode="same",
+            activation="relu",
+            input_shape=(1, 32088, 1)))
+        cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
+        cnn.add(MaxPooling2D(pool_size=(2, 1)))
 
-#    cnn.compile(loss="categorical_crossentropy", batch_size=32, optimizer="adam")
+    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
+    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
+    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
+    #    cnn.add(MaxPooling2D(pool_size=(2, 1)))
+            
+    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
+    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
+    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
+    #    cnn.add(MaxPooling2D(pool_size=(2, 1)))
+            
+        cnn.add(Flatten())
+        cnn.add(Dense(1024, activation="relu"))
+        cnn.add(Dropout(0.5))
+    #    cnn.add(Dense(3, activation="softmax"))
+        cnn.add(Dense(len(topics), activation="softmax"))
+        # define optimizer and objective, compile cnn
 
-    # train
+    #    cnn.compile(loss="categorical_crossentropy", batch_size=32, optimizer="adam")
 
-#    cnn.fit(X_train, Y_train, nb_epoch=20, show_accuracy=True)
+        # train
 
-#    ####CNN for word representation -resulting in a error, should be fixed
-#    X_train = np.array([[sample] for sample in X_train])
-#    model = Sequential()
-#    # input: 100x100 images with 3 channels -> (3, 100, 100) tensors.
-#    # this applies 32 convolution filters of size 3x3 each.
-##    model.add(Dense(output_dim=len(X_train[0]), input_dim=len(X_train[0])))
-##    model.add(Activation("relu"))
-#    model.add(Convolution1D(64, 3, 1, border_mode='valid', input_shape=(len(X_train[0]), len(X_train[0]))))
-##    model.add(Convolution2D(32, 3, 1, border_mode='valid', input_shape=(len(X_train[0]), 1)))
-#    model.add(Activation('relu'))
-#    model.add(Convolution1D(32, 3))
-#    model.add(Activation('relu'))
-#    model.add(MaxPooling1D(pool_length=2))
-#    model.add(Dropout(0.25))
+    #    cnn.fit(X_train, Y_train, nb_epoch=20, show_accuracy=True)
 
-#    model.add(Convolution1D(64, 3, border_mode='valid'))
-#    model.add(Activation('relu'))
-#    model.add(Convolution1D(64, 3))
-#    model.add(Activation('relu'))
-#    model.add(MaxPooling1D(pool_length=2))
-#    model.add(Dropout(0.25))
+    #    ####CNN for word representation -resulting in a error, should be fixed
+    #    X_train = np.array([[sample] for sample in X_train])
+    #    model = Sequential()
+    #    # input: 100x100 images with 3 channels -> (3, 100, 100) tensors.
+    #    # this applies 32 convolution filters of size 3x3 each.
+    ##    model.add(Dense(output_dim=len(X_train[0]), input_dim=len(X_train[0])))
+    ##    model.add(Activation("relu"))
+    #    model.add(Convolution1D(64, 3, 1, border_mode='valid', input_shape=(len(X_train[0]), len(X_train[0]))))
+    ##    model.add(Convolution2D(32, 3, 1, border_mode='valid', input_shape=(len(X_train[0]), 1)))
+    #    model.add(Activation('relu'))
+    #    model.add(Convolution1D(32, 3))
+    #    model.add(Activation('relu'))
+    #    model.add(MaxPooling1D(pool_length=2))
+    #    model.add(Dropout(0.25))
 
-##    model.add(Flatten())
-#    # Note: Keras does automatic shape inference.
-#    model.add(Dense(256))
-#    model.add(Activation('relu'))
-#    model.add(Dropout(0.5))
+    #    model.add(Convolution1D(64, 3, border_mode='valid'))
+    #    model.add(Activation('relu'))
+    #    model.add(Convolution1D(64, 3))
+    #    model.add(Activation('relu'))
+    #    model.add(MaxPooling1D(pool_length=2))
+    #    model.add(Dropout(0.25))
 
-#    model.add(Dense(len(topics)))
-#    model.add(Activation('softmax'))
+    ##    model.add(Flatten())
+    #    # Note: Keras does automatic shape inference.
+    #    model.add(Dense(256))
+    #    model.add(Activation('relu'))
+    #    model.add(Dropout(0.5))
 
-    sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-    cnn.compile(loss='categorical_crossentropy', optimizer=sgd)
-#    print X_train[0:5]
-#    print Y_train[0:5]
-    cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=1)
-    
-    return cnn
+    #    model.add(Dense(len(topics)))
+    #    model.add(Activation('softmax'))
+
+        sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+        cnn.compile(loss='categorical_crossentropy', optimizer=sgd)
+    #    print X_train[0:5]
+    #    print Y_train[0:5]
+        cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=1)
+        
+        return cnn
+    except KeyboardInterrupt:
+        del X_train
+        del Y_train
+        print "deleted"
+
+    except AssertionError:
+        del X_train
+        del Y_train
+        print "deleted"
+
 
 def main():
-    filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
-    filename2 = "users.txt"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
-    preprocess(filename1, filename2)
+#    import gc
+#    gc.collect()
+    global X_train, Y_train
+    try:
+        filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
+        filename2 = "users.txt"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
+        preprocess(filename1, filename2)
+    except KeyboardInterrupt:
+        del X_train
+        del Y_train
+        print "deleted"
+        
+    except AssertionError:
+        del X_train
+        del Y_train
+        print "deleted"
     
 main()
