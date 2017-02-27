@@ -234,11 +234,11 @@ def train_cnn(word_dict, topics):
         cnn.add(Dense(len(topics), activation="softmax"))
         # define optimizer and objective, compile cnn
 
-    #    cnn.compile(loss="categorical_crossentropy", batch_size=32, optimizer="adam")
+#        cnn.compile(loss="categorical_crossentropy", batch_size=32, optimizer="adam")
 
-        # train
+##         train
 
-    #    cnn.fit(X_train, Y_train, nb_epoch=20, show_accuracy=True)
+#        cnn.fit(X_train, Y_train, nb_epoch=20, show_accuracy=True)
 
     #    ####CNN for word representation -resulting in a error, should be fixed
     #    X_train = np.array([[sample] for sample in X_train])
@@ -272,10 +272,10 @@ def train_cnn(word_dict, topics):
     #    model.add(Activation('softmax'))
 
         sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-        cnn.compile(loss='categorical_crossentropy', optimizer=sgd)
+        cnn.compile(loss='categorical_crossentropy', optimizer=sgd, batch_size=42)
     #    print X_train[0:5]
     #    print Y_train[0:5]
-        cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=1)
+        cnn.fit(X_train, Y_train, batch_size=42, nb_epoch=1)
         
         return cnn
     except KeyboardInterrupt:
