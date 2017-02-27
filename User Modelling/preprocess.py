@@ -8,8 +8,10 @@ from nltk.stem.porter import *
 import numpy as np
 import cPickle as pickle
 from collections import Counter
+from keras.models import model_from_json
 import math
 import signal
+import h5py
 
 
 X_train = []
@@ -112,14 +114,17 @@ def preprocess(filename1, filename2):
         data['tweet'][i] = " ".join(data['tweet'][i])
     
     topics = list(data["topic"])
-    
+#    Watch out
+    topics = topics[0:10]
 #    Word topic mapping
     try:
         word_dict = pickle.load(open("word_dict", "r"))
     except:
         tweets = ""
-        for i in data['tweet']:
-            tweets += str(i)
+        for index, i in data.iterrows():
+#        for i in data['tweet']:
+            if i['topic'] in topics:
+                tweets += str(i['tweet'])
         
         word_dict = {}
         tweets = tweets.split()
@@ -130,11 +135,39 @@ def preprocess(filename1, filename2):
                     word_dict[word].append(topics[i])        
         pickle.dump(word_dict, open("word_dict", "wb"))
     
-    print "the word 'election' is present in", (word_dict['election'])
+    print "the word 'election' is present in", (word_dict['register'])
     print len(word_dict)
 #    Word model
-    model = train_cnn(word_dict, topics)
-    pickle.dump(model, open("model", "wb"))
+    try:
+        json_file = open('model.json', 'r')
+        loaded_model_json = json_file.read()
+        json_file.close()
+        model = model_from_json(loaded_model_json)
+        # load weights into new model
+#        model.load_weights("model.h5")
+        [X_train, Y_train] = pickle.load(open("train_data", "r"))
+        
+    except:
+        [model, X_train, Y_train] = train_cnn(word_dict, topics)
+        
+        pickle.dump([X_train, Y_train], open("train_data", "wb"))
+        try:
+            model_json = model.to_json()
+            with open("model.json", "w") as json_file:
+                json_file.write(model_json)
+            model.save_weights("model.h5")
+            print("Saved model to disk")
+        except Exception as e:
+            print "ex", e
+            try:
+                pickle.dump(model, open("model", "wb"))
+            except:
+                print "dumping failed"
+    
+    y = model.predict(X_train)#, Y_train, batch_size=32, verbose=1, sample_weight=None)
+    diff = abs(y - Y_train)
+    for d in diff:
+        print d
 
 def train_cnn(word_dict, topics):
 
@@ -153,20 +186,30 @@ def train_cnn(word_dict, topics):
         
     #    Encoding X_train and Y_train
         vocab = word_dict.keys()
+        print "length of vocab is ", len(vocab)
         print "before"
+#        print word_dict
+#        print vocab
+#        print topics
         for i in range(len(vocab)):
             c = np.zeros(len(topics))
             c_x = np.zeros(len(vocab))
-            locations = np.array([i for i in range(len(topics)) if topics[i] in word_dict[vocab[i]]])
+#            for i in range(len(topics)):
+#                print topics[i], word_
+            locations = np.array([j for j in range(len(topics)) if topics[j] in word_dict[vocab[i]]])
+#            print locations
             c_x[i] = 1
+            X_train.append(c_x)# = np.append(X_train, c_x)
             try:#buggy, fews words aren't found in any topics, weird, space removed by mistake.'
                 c[locations] = 1
-                
-                X_train.append(c_x)# = np.append(X_train, c_x)
+#                print len(c_x)
                 Y_train.append(c)# = np.append(Y_train, c)
+#                print "atleast"
     #            print locations
             except:
-                print "l is", locations, word 
+                print "couldn't find", vocab[i]
+                Y_train.append(np.zeros(len(topics)))
+#                print "l is",# locations, word 
              #This could be buggy
         
             
@@ -174,21 +217,23 @@ def train_cnn(word_dict, topics):
     #    print X_train[0]
     #    Main line
     #    X_train = csr_matrix(np.array(X_train))#
-        X_train = np.array(X_train).astype('float32')
+        X_train = np.array(X_train).astype('float16')
     #    Y_train = csr_matrix(Y_train)#
-        Y_train = np.array(Y_train).astype('float32')
+        Y_train = np.array(Y_train).astype('float16')
         print "after"
-        X_train = X_train.reshape(32088, 1, 32088, 1)#(len(X_train), 1, len(X_train[0]), 1))
+#        print X_train
+#        print Y_train
+        X_train = X_train.reshape(len(X_train), 1, len(X_train[0]), 1)#(32088, 1, 32088, 1)#
         print X_train.shape
     #    print "first shape", X_train.shape
         print X_train[0]
     #    Trial
-    #    X_train = np.random.rand(32088, 128).astype("float32")
-    #    
-    #    X_train = X_train.reshape((32088, 1, 128, 1))
-    #    Y_train = np.array(Y_train)
-    #    print "second shape", X_train.shape
-    #    print X_train[0]
+#        X_train = np.random.rand(32088, 128).astype("float32")
+#        
+#        X_train = X_train.reshape((32088, 1, 128, 1))
+#        Y_train = np.array(Y_train)
+#        print "second shape", X_train.shape
+#        print X_train[0]
         
     # output labels should be one-hot vectors - ie,
     # 0 -> [0, 0, 1]
@@ -213,22 +258,22 @@ def train_cnn(word_dict, topics):
         cnn.add(Convolution2D(64, 3, 1,
             border_mode="same",
             activation="relu",
-            input_shape=(1, 32088, 1)))
+            input_shape=(1, 3657, 1)))
         cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
         cnn.add(MaxPooling2D(pool_size=(2, 1)))
 
-    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
-    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
-    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
-    #    cnn.add(MaxPooling2D(pool_size=(2, 1)))
-            
-    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
-    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
-    #    cnn.add(Convolution2D(16, 3, 1, border_mode="same", activation="relu"))
-    #    cnn.add(MaxPooling2D(pool_size=(2, 1)))
+#        cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
+#        cnn.add(Convolution2D(64, 3, 1, border_mode="same", activation="relu"))
+##        cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
+#        cnn.add(MaxPooling2D(pool_size=(2, 1)))
+#            
+#        cnn.add(Convolution2D(64, 3, 1, border_mode="same", activation="relu"))
+#        cnn.add(Convolution2D(32, 3, 1, border_mode="same", activation="relu"))
+##        cnn.add(Convolution2D(64, 3, 1, border_mode="same", activation="relu"))
+#        cnn.add(MaxPooling2D(pool_size=(2, 1)))
             
         cnn.add(Flatten())
-        cnn.add(Dense(1024, activation="relu"))
+        cnn.add(Dense(100, activation="linear"))
         cnn.add(Dropout(0.5))
     #    cnn.add(Dense(3, activation="softmax"))
         cnn.add(Dense(len(topics), activation="softmax"))
@@ -272,12 +317,12 @@ def train_cnn(word_dict, topics):
     #    model.add(Activation('softmax'))
 
         sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-        cnn.compile(loss='categorical_crossentropy', optimizer=sgd, batch_size=42)
+        cnn.compile(loss='categorical_crossentropy', optimizer=sgd, batch_size=32)
     #    print X_train[0:5]
     #    print Y_train[0:5]
-        cnn.fit(X_train, Y_train, batch_size=42, nb_epoch=1)
-        
-        return cnn
+        cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=1)
+        print "Done training, returning model"
+        return [cnn, X_train, Y_train]
     except KeyboardInterrupt:
         del X_train
         del Y_train
