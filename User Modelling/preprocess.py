@@ -18,6 +18,9 @@ from keras.layers import Convolution1D, MaxPooling1D, Convolution2D, MaxPooling2
 from keras.optimizers import SGD
 from keras import backend as K
 from scipy.sparse import csr_matrix
+from sklearn.manifold import TSNE
+import codecs
+import pylab as plot
 K.set_image_dim_ordering('th')
 
 
@@ -106,6 +109,39 @@ def stemmer(preprocessed_data_sample):
             preprocessed_data_sample[i] = preprocessed_data_sample[i].replace(preprocessed_data_sample[i], " ".join([str(word) for word in preprocessed_data_sample[i].split()]))
     return preprocessed_data_sample
     
+def load_embeddings(file_name):
+ 
+    with codecs.open(file_name, 'r', 'utf-8') as f_in:
+        vocabulary, wv = zip(*[line.strip().split(' ', 1) for line in 
+f_in])
+    wv = np.loadtxt(wv)
+    return wv, vocabulary
+    
+#feature extraction - TFIDF and unigrams
+def vectorize(preprocessed_data_sample):
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    # Initialize the "CountVectorizer" object, which is scikit-learn's
+    # bag of words tool.
+#    no_features = 1000#500#806#150#800#600#350
+
+    #ngram_range=(1, 1)
+#    input=u'content', encoding=u'utf-8', decode_error=u'strict', strip_accents=None, lowercase=True, preprocessor=None, tokenizer=None, analyzer=u'word', stop_words=None, token_pattern=u'(?u)\b\w\w+\b', ngram_range=(1, 1), max_df=1.0, min_df=1, max_features=None, vocabulary=None, binary=False, dtype=<type 'numpy.int64'>, norm=u'l2', use_idf=True, smooth_idf=True, sublinear_tf=False
+
+    vectorizer = TfidfVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, vocabulary = None, ngram_range=(1,1), strip_accents=None)#, max_features = no_features)#, ngram_range=(2,2))
+    #vectorizer = CountVectorizer(analyzer = "word", tokenizer = None, preprocessor = None, stop_words = None, ngram_range=(2,2), max_features = no_features)
+    # fit_transform() does two functions: First, it fits the model
+    # and learns the vocabulary; second, it transforms our training data
+    # into feature vectors. The input to fit_transform should be a list of
+    # strings.
+    train_data_features = vectorizer.fit_transform(preprocessed_data_sample)
+
+    # Numpy arrays are easy to work with, so convert the result to an
+    # array
+    train_data_features = train_data_features.toarray()
+    return [train_data_features, vectorizer, no_features]
+
+    
 def preprocess(filename1, filename2):
     #filename = "Homework2_data.csv"
     df = readData(filename1, filename2)
@@ -153,11 +189,13 @@ def preprocess(filename1, filename2):
         # load weights into new model
         model.load_weights("model.h5")
         [X_train, Y_train] = pickle.load(open("train_data", "r"))
+        vocab = pickle.load(open("vocab_tsne", "r"))
         
     except:
-        [model, X_train, Y_train] = train_cnn(word_dict, topics)
+        [model, X_train, Y_train, vocab] = train_cnn(word_dict, topics)
         
         pickle.dump([X_train, Y_train], open("train_data", "wb"))
+        pickle.dump(vocab, open("vocab_tsne", "wb"))
         try:
             model_json = model.to_json()
             with open("model.json", "w") as json_file:
@@ -172,8 +210,8 @@ def preprocess(filename1, filename2):
                 print "dumping failed"
     
 #    Prediction
-    y = model.predict(X_train)#, Y_train, batch_size=32, verbose=1, sample_weight=None)
-    diff = abs(y - Y_train)
+#    y = model.predict(X_train)#, Y_train, batch_size=32, verbose=1, sample_weight=None)
+#    diff = abs(y - Y_train)
 ##    for d in diff:
 ##        print d
 ##    Error
@@ -184,10 +222,33 @@ def preprocess(filename1, filename2):
                                   [model.layers[6].output])
 
 # output in train mode = 0
-    layer_output = get_last_layer_output([X_train[0:1000], 0])[0]
+    layer_output = np.array(get_last_layer_output([X_train[0:1000], 0])[0])
     print layer_output
     print len(layer_output[0])
-    print sum(sum(diff)) / len(X_train) * 1.0
+#    print sum(sum(diff)) / len(X_train) * 1.0
+    
+#    Write to file for Tsne or visualize
+    np.set_printoptions(suppress = True)
+    tsne = TSNE(n_components = 3, random_state = 0)
+    Y = tsne.fit_transform(layer_output)
+    file_name = "labels.txt"
+#    wv, vocabulary = load_embeddings(file_name)
+    vocabulary = vocab
+    wv = X_train    
+    plot.scatter(Y[:, 0], Y[:, 1])#, Y[:, 2])
+    for label, x, y in zip(vocabulary, Y[:, 0], Y[:, 1]):
+        plot.annotate(label, xy=(x, y), xytext=(0, 0), textcoords='offset points')
+    plot.show()
+    
+#    plot.scatter(tsne_vec[:, 0].astype('float32'), tsne_vec[:, 1].astype('float32'), 20, np.array(range(len(layer_output))))#np.array(vocab))
+#    plot.show()
+#    f1 = open("vectors.txt", "w")
+#    f2 = open("labels.txt", "w")
+#    for i in range(len(layer_output)):
+#        f1.write(str(layer_output[i]) + str("\n"))
+#        f2.write(str(vocab[i]) + str("\n"))
+#    f1.close()
+#    f2.close()
 
 
 def train_cnn(word_dict, topics):
@@ -278,7 +339,7 @@ def train_cnn(word_dict, topics):
     #    print Y_train[0:5]
         cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=1)
         print "Done training, returning model"
-        return [cnn, X_train, Y_train]
+        return [cnn, X_train, Y_train, vocab]
     except KeyboardInterrupt:
         del X_train
         del Y_train
