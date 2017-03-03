@@ -22,6 +22,7 @@ from scipy.sparse import csr_matrix
 from sklearn.manifold import TSNE
 import codecs
 import pylab as plot
+import random
 K.set_image_dim_ordering('th')
 
 
@@ -156,6 +157,7 @@ def preprocess(filename1, filename2):
     data = DataFrame(df.groupby('topic')['tweet'].apply(list)).reset_index()
 
     data = data[0:10]
+#    data = shuffle(data)
     topics = list(data["topic"])
 #    Watch out - only ten topics
 #    topics = topics[0:10]
@@ -229,7 +231,7 @@ def preprocess(filename1, filename2):
                                   [model.layers[2].output])
 
 # output in train mode = 0
-    layer_output = np.array(get_last_layer_output([X_train[0:500], 0])[0])
+    layer_output = np.array(get_last_layer_output([X_train[0:1200], 0])[0])
     print layer_output
     print len(layer_output[0])
     print sum(sum(diff ** 2)) / len(X_train) * 1.0
@@ -268,6 +270,8 @@ def train_cnn(word_dict, topics):
         
     #    Encoding X_train and Y_train
         vocab = word_dict.keys()
+#        killer
+        random.shuffle(vocab)
         print "length of vocab is ", len(vocab)
         print "before"
 #        print word_dict
@@ -313,12 +317,12 @@ def train_cnn(word_dict, topics):
         print "Shape sir is", Y_train.shape
         cnn = Sequential()
         cnn.add(Dense(1000, input_dim=3657))
-        cnn.add(Dense(500, activation="linear"))
-#        cnn.add(Convolution2D(32, 100, 1,
+        cnn.add(Dense(500, activation="tanh"))
+#        cnn.add(Convolution2D(16, 100, 1,
 #            border_mode="same",
 #            activation="relu",
 #            input_shape=(1, 3657, 1)))
-#        cnn.add(Convolution2D(16, 30, 1, border_mode="same", activation="relu"))
+#        cnn.add(Convolution2D(8, 4, 1, border_mode="same", activation="relu"))
 #        cnn.add(MaxPooling2D(pool_size=(2, 1)))
 
 ##        cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
@@ -349,7 +353,7 @@ def train_cnn(word_dict, topics):
         cnn.compile(loss='categorical_crossentropy', optimizer=adam, batch_size=32)
     #    print X_train[0:5]
     #    print Y_train[0:5]
-        cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=10)
+        cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=20)
         print "Done training, returning model"
         return [cnn, X_train, Y_train, vocab]
     except KeyboardInterrupt:
