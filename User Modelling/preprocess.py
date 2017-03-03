@@ -72,8 +72,9 @@ def tokenize_and_stopwords(data_sample):
             words[i] = words[i].strip()
     except: 
         words = []
+    
     print "words", words
-    abb_dict = pickle.load(open("abbreviations", "r"))
+#    abb_dict = pickle.load(open("abbreviations", "r"))
     stop = stopwords.words('english') + words #list(string.punctuation) + ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     #Use only characters from reviews
     data_sample = data_sample.str.replace("[^a-zA-Z ]", " ")#, " ")
@@ -154,13 +155,15 @@ def preprocess(filename1, filename2):
     df['tweet'] = tokenize_and_stopwords(df['tweet'])
     data = DataFrame(df.groupby('topic')['tweet'].apply(list)).reset_index()
 
-    for i in range(len(data)):
-        data['tweet'][i] = " ".join(data['tweet'][i])
-    
+    data = data[0:10]
     topics = list(data["topic"])
 #    Watch out - only ten topics
+#    topics = topics[0:10]
+
+    for i in range(len(data)):
+        data['tweet'][i] = " ".join(data['tweet'][i])
     print topics
-    topics = topics[0:10]
+#    data = data[data["topic"] in  ]
 #    Word topic mapping
     try:
         word_dict = pickle.load(open("word_dict", "r"))
@@ -223,7 +226,7 @@ def preprocess(filename1, filename2):
 #    get_last_layer_output = K.function([model.layers[0].input, K.learning_phase()],
 #                                  [model.layers[6].output])
     get_last_layer_output = K.function([model.layers[0].input, K.learning_phase()],
-                                  [model.layers[1].output])
+                                  [model.layers[2].output])
 
 # output in train mode = 0
     layer_output = np.array(get_last_layer_output([X_train[0:500], 0])[0])
@@ -309,12 +312,13 @@ def train_cnn(word_dict, topics):
 
         print "Shape sir is", Y_train.shape
         cnn = Sequential()
-        cnn.add(Dense(32, input_dim=3657))
-#        cnn.add(Convolution2D(64, 100, 1,
+        cnn.add(Dense(1000, input_dim=3657))
+        cnn.add(Dense(500, activation="linear"))
+#        cnn.add(Convolution2D(32, 100, 1,
 #            border_mode="same",
 #            activation="relu",
 #            input_shape=(1, 3657, 1)))
-#        cnn.add(Convolution2D(64, 3, 1, border_mode="same", activation="relu"))
+#        cnn.add(Convolution2D(16, 30, 1, border_mode="same", activation="relu"))
 #        cnn.add(MaxPooling2D(pool_size=(2, 1)))
 
 ##        cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
