@@ -3,7 +3,7 @@ from pandas import DataFrame
 import os
 from nltk.corpus import stopwords
 import re
-import enchant
+#import enchant
 from nltk.stem.porter import *
 import numpy as np
 import cPickle as pickle
@@ -217,52 +217,73 @@ def preprocess(filename1, filename2):
                 print "dumping failed"
     
 #    Prediction
-    y = model.predict(X_train)#, Y_train, batch_size=32, verbose=1, sample_weight=None)
-    diff = abs(y - Y_train)
+    y = model.predict(X_train, batch_size = 100)#, Y_train, batch_size=32, verbose=1, sample_weight=None)
+    print "This is the prediction"
+    y[y >= 0.1] = 1
+    y[y < 0.1] = 0
+    print y[0:10]
+    print "true labels"
+    print Y_train[0:10]
+    print sum(sum(y == Y_train))  * 100.0 / (len(X_train) * 10.0)
+
 ##    for d in diff:
 ##        print d
 ##    Error
     
-    
+#    
 #    Hidden state
 #    get_last_layer_output = K.function([model.layers[0].input, K.learning_phase()],
 #                                  [model.layers[6].output])
+
     get_last_layer_output = K.function([model.layers[0].input, K.learning_phase()],
-                                  [model.layers[2].output])
+                                  [model.layers[4].output])
 
 # output in train mode = 0
     layer_output = np.array(get_last_layer_output([X_train[0:1200], 0])[0])
-    print layer_output
-    print len(layer_output[0])
-    print sum(sum(diff ** 2)) / len(X_train) * 1.0
     
+    
+# output in train mode = 0
+    start = 0
+    increment = 100
+    flag = 1
+    while start+increment <= len(X_train):
+        if flag:
+            layer_output = get_last_layer_output([X_train[start:start+increment], 0])[0]
+            flag = 0
+        else:
+            layer_output = np.concatenate((layer_output, get_last_layer_output([X_train[start:start+increment], 0])[0]))
+        start += increment
+    if start != len(X_train):
+        layer_output = np.concatenate((layer_output, get_last_layer_output([X_train[start:len(X_train)], 0])[0]))
+        
 #    Write to file for Tsne or visualize
     np.set_printoptions(suppress = True)
     tsne = TSNE(n_components = 2, random_state = 0)
-    Y = tsne.fit_transform(layer_output)
     file_name = "labels.txt"
-#    wv, vocabulary = load_embeddings(file_name)
-    vocabulary = vocab
-    wv = X_train    
+    Y = tsne.fit_transform(layer_output[0:1200])
+    vocabulary = vocab[0:1200]
     plot.scatter(Y[:, 0], Y[:, 1])#, Y[:, 2])
     for label, x, y in zip(vocabulary, Y[:, 0], Y[:, 1]):
         plot.annotate(label, xy=(x, y), xytext=(0, 0), textcoords='offset points')
     plot.title(topics)
     plot.show()
     
-#    plot.scatter(tsne_vec[:, 0].astype('float32'), tsne_vec[:, 1].astype('float32'), 20, np.array(range(len(layer_output))))#np.array(vocab))
-#    plot.show()
-#    f1 = open("vectors.txt", "w")
-#    f2 = open("labels.txt", "w")
-#    for i in range(len(layer_output)):
-#        f1.write(str(layer_output[i]) + str("\n"))
-#        f2.write(str(vocab[i]) + str("\n"))
-#    f1.close()
-#    f2.close()
+    f1 = open("vectors.txt", "w")
+    f2 = open("labels.txt", "w")
+    for i in range(len(layer_output)):
+        f1.write(str(layer_output[i]) + str("\n"))
+        f2.write(str(vocab[i]) + str("\n"))
+    f1.close()
+    f2.close()
 
 
 def train_cnn(word_dict, topics):
 
+    global K
+#    with K.tf.device('/gpu:1'):
+    gpu_options = K.tf.GPUOptions(per_process_gpu_memory_fraction=0.8)#0.2)
+    sess = K.tf.Session(config=K.tf.ConfigProto(gpu_options=gpu_options))
+#        K._set_session(K.tf.Session(config=K.tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)))
     try:
         X_train = []#np.array([])
 #        Y_train = []#np.array([])
@@ -309,21 +330,21 @@ def train_cnn(word_dict, topics):
         print "after"
 #        print X_train
 #        print Y_train
-#        X_train = X_train.reshape(len(X_train), 1, len(X_train[0]), 1)#(32088, 1, 32088, 1)#
+        X_train = X_train.reshape(len(X_train), 1, len(X_train[0]), 1)#(32088, 1, 32088, 1)#
         print X_train.shape
     #    print "first shape", X_train.shape
         print X_train[0]
 
         print "Shape sir is", Y_train.shape
         cnn = Sequential()
-        cnn.add(Dense(1000, input_dim=3657))
-        cnn.add(Dense(500, activation="tanh"))
-#        cnn.add(Convolution2D(16, 100, 1,
-#            border_mode="same",
-#            activation="relu",
-#            input_shape=(1, 3657, 1)))
-#        cnn.add(Convolution2D(8, 4, 1, border_mode="same", activation="relu"))
-#        cnn.add(MaxPooling2D(pool_size=(2, 1)))
+#        cnn.add(Dense(1000, input_dim=3657))
+#        cnn.add(Dense(500, activation="tanh"))
+        cnn.add(Convolution2D(16, 100, 1,
+            border_mode="same",
+            activation="relu",
+            input_shape=(1, 3657, 1)))
+        cnn.add(Convolution2D(8, 4, 1, border_mode="same", activation="relu"))
+        cnn.add(MaxPooling2D(pool_size=(2, 1)))
 
 ##        cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
 ##        cnn.add(Convolution2D(64, 3, 1, border_mode="same", activation="relu"))
@@ -335,7 +356,8 @@ def train_cnn(word_dict, topics):
 ##        cnn.add(Convolution2D(64, 3, 1, border_mode="same", activation="relu"))
 #        cnn.add(MaxPooling2D(pool_size=(2, 1)))
 #            
-#        cnn.add(Flatten())
+        cnn.add(Flatten())
+#        cnn.add(Dropout(0.2))
         cnn.add(Dense(100, activation="linear"))
 #        cnn.add(Dense(100, activation="tanh"))
 #        cnn.add(Dropout(0.2))
@@ -350,10 +372,10 @@ def train_cnn(word_dict, topics):
 #        cnn.fit(X_train, Y_train, nb_epoch=20, show_accuracy=True)
 #        sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
         adam = Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-        cnn.compile(loss='categorical_crossentropy', optimizer=adam, batch_size=32)
+        cnn.compile(loss='binary_crossentropy', optimizer=adam, batch_size=32)
     #    print X_train[0:5]
     #    print Y_train[0:5]
-        cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=20)
+        cnn.fit(X_train, Y_train, batch_size=32, nb_epoch=10)
         print "Done training, returning model"
         return [cnn, X_train, Y_train, vocab]
     except KeyboardInterrupt:
@@ -375,6 +397,8 @@ def main():
         filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
         filename2 = "users.txt"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
         preprocess(filename1, filename2)
+#        cudaDeviceReset()
+        
     except KeyboardInterrupt:
         del X_train
         del Y_train
@@ -384,5 +408,7 @@ def main():
         del X_train
         del Y_train
         print "deleted"
+#    except:
+#        cudaDeviceReset()
     
 main()
