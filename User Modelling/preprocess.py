@@ -224,6 +224,7 @@ def preprocess(filename1, filename2):
     
     print data
     print "the word 'election' is present in", (word_dict['election'])
+    print "the word 'hillary' is present in", (word_dict['hillary'])
     print len(word_dict)
 #    Word model
     try:
@@ -311,13 +312,18 @@ def preprocess(filename1, filename2):
 #    
 #    plot.scatter(tsne_vec[:, 0].astype('float32'), tsne_vec[:, 1].astype('float32'), 20, np.array(range(len(layer_output))))#np.array(vocab))
 #    plot.show()
-    f1 = open("vectors.txt", "w")
-    f2 = open("labels.txt", "w")
-    for i in range(len(layer_output)):
-        f1.write(str(layer_output[i]) + str("\n"))
-        f2.write(str(vocab[i]) + str("\n"))
-    f1.close()
-    f2.close()
+#    f1 = open("vectors.txt", "w")
+#    f2 = open("labels.txt", "w")
+    
+    word2topic = {}
+    for i in range(len(vocab)):
+        word2topic[vocab[i]] = layer_output[i]
+    pickle.dump(word2topic, open("word2topic", "wb"))
+#    for i in range(len(layer_output)):
+#        f1.write(str(layer_output[i]) + str("\n"))
+#        f2.write(str(vocab[i]) + str("\n"))
+#    f1.close()
+#    f2.close()
 
 
 def train_cnn(word_dict, topics):
