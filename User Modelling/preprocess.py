@@ -29,6 +29,16 @@ K.set_image_dim_ordering('th')
 X_train = []
 Y_train = []
 
+genre = np.array(['tech', 'politics', 'music', 'sports'])
+tech = np.array(['@microsoft', 'nokia', 'amazon', 'amazon prime', 'amazon prime day', 'apple', 'apple watch', 'ipad', 'iphone', 'ipod', 'oracle', 'ibm', 'nintendo', 'moto g', 'google', 'google +', 'ps4', 'netflix'])                        
+
+politics = np.array(['angela merkel',  'bernie sanders', 'david cameron',' donald trump', 'hillary', 'joe biden', 'michelle obama', 'obama', 'rahul gandhi', 'tony blair'])
+
+music = np.array(['bee gees', 'beyonce', 'bob marley', 'chris brown', 'david bowie', 'katy perry',  'ed sheeran', 'foo fighters', 'janet jackson', 'lady gaga', 'michael jackson',  'ac/dc', 'the vamps', 'iron maiden', 'rolling stone', 'jay-z', 'snoop dogg', 'nirvana'])
+
+sports = np.array(['arsenal', 'barca', 'federer', 'floyd mayweather', 'hulk hogan', 'john cena', 'kris bryant', 'randy orton', 'real madrid', 'serena', 'messi', 'david beckham', 'rousey', 'super eagles', 'kane', 'red sox', 'white sox'])
+
+
 def handler(signum, frame):
     print 'Ctrl+Z pressed'
     assert False
@@ -146,25 +156,52 @@ def vectorize(preprocessed_data_sample):
 
     
 def preprocess(filename1, filename2):
+
+    global tech, politics, sports, music, genre
     #filename = "Homework2_data.csv"
     df = readData(filename1, filename2)
+    print "length of df is", len(df)
     print "from joined data\n", Counter(list(df["user_id"])).most_common(50)
     indices = []
 #    df['tweet'] = df['tweet'].apply(cleanhtml).apply(cleanUrl).apply(removeMention).apply(removeTrailingHash);
 
     df['tweet'] = df['tweet'].apply(cleanhtml).apply(cleanUrl)#.apply(removeTrailingHash);
     df['tweet'] = tokenize_and_stopwords(df['tweet'])
-    data = DataFrame(df.groupby('topic')['tweet'].apply(list)).reset_index()
+    
+    all_topics = np.concatenate((tech, politics, music, sports))
+    
+#    Remove topics of no interest
 
-    data = data[0:10]
+    df = df[df["topic"].isin(all_topics)]
+
+    
+    print "remove unnecessary\n", set(df["topic"])
+#    Merging topics for word modelling
+    
+    topics_array = np.array(([tech, politics, music, sports]))
+    for index, row in df.iterrows():
+
+        tweet_topic = row['topic']
+        for i in range(len(topics_array)):
+            if tweet_topic in topics_array[i]:
+                df["topic"][index] = genre[i]
+                break
+
+
+#    print "After Merge\n", set(df["topic"])
+    
+    data = DataFrame(df.groupby('topic')['tweet'].apply(list)).reset_index()
+            
+#    embed_data = 
 #    data = shuffle(data)
     topics = list(data["topic"])
+    print "after grouping\n", topics
 #    Watch out - only ten topics
 #    topics = topics[0:10]
 
     for i in range(len(data)):
         data['tweet'][i] = " ".join(data['tweet'][i])
-    print topics
+#    print topics
 #    data = data[data["topic"] in  ]
 #    Word topic mapping
     try:
@@ -185,7 +222,8 @@ def preprocess(filename1, filename2):
                     word_dict[word].append(topics[i])        
         pickle.dump(word_dict, open("word_dict", "wb"))
     
-    print "the word 'election' is present in", (word_dict['register'])
+    print data
+    print "the word 'election' is present in", (word_dict['election'])
     print len(word_dict)
 #    Word model
     try:
@@ -224,7 +262,9 @@ def preprocess(filename1, filename2):
     print y[0:10]
     print "true labels"
     print Y_train[0:10]
-    print sum(sum(y == Y_train))  * 100.0 / (len(X_train) * 10.0)
+    print sum(sum(y == Y_train))
+    print (len(X_train) * len(X_train[0]))
+    print (sum(sum(y == Y_train))  * 100.0) / (len(X_train) * 4.0)
 
 ##    for d in diff:
 ##        print d
@@ -235,12 +275,11 @@ def preprocess(filename1, filename2):
 #    get_last_layer_output = K.function([model.layers[0].input, K.learning_phase()],
 #                                  [model.layers[6].output])
 
-    get_last_layer_output = K.function([model.layers[0].input, K.learning_phase()],
+    get_last_layer_output = K.function([model.layers[0].input],
                                   [model.layers[4].output])
 
 # output in train mode = 0
-    layer_output = np.array(get_last_layer_output([X_train[0:1200], 0])[0])
-    
+#    layer_output = np.array(get_last_layer_output([X_train[0:1200], 0])[0])
     
 # output in train mode = 0
     start = 0
@@ -257,17 +296,21 @@ def preprocess(filename1, filename2):
         layer_output = np.concatenate((layer_output, get_last_layer_output([X_train[start:len(X_train)], 0])[0]))
         
 #    Write to file for Tsne or visualize
-    np.set_printoptions(suppress = True)
-    tsne = TSNE(n_components = 2, random_state = 0)
+#    np.set_printoptions(suppress = True)
+#    tsne = TSNE(n_components = 2, random_state = 0)
+#    Y = tsne.fit_transform(layer_output)
     file_name = "labels.txt"
-    Y = tsne.fit_transform(layer_output[0:1200])
-    vocabulary = vocab[0:1200]
-    plot.scatter(Y[:, 0], Y[:, 1])#, Y[:, 2])
-    for label, x, y in zip(vocabulary, Y[:, 0], Y[:, 1]):
-        plot.annotate(label, xy=(x, y), xytext=(0, 0), textcoords='offset points')
-    plot.title(topics)
-    plot.show()
-    
+#    wv, vocabulary = load_embeddings(file_name)
+    vocabulary = vocab
+    wv = X_train    
+#    plot.scatter(Y[:, 0], Y[:, 1])#, Y[:, 2])
+#    for label, x, y in zip(vocabulary, Y[:, 0], Y[:, 1]):
+#        plot.annotate(label, xy=(x, y), xytext=(0, 0), textcoords='offset points')
+#    plot.title(topics)
+#    plot.show()
+#    
+#    plot.scatter(tsne_vec[:, 0].astype('float32'), tsne_vec[:, 1].astype('float32'), 20, np.array(range(len(layer_output))))#np.array(vocab))
+#    plot.show()
     f1 = open("vectors.txt", "w")
     f2 = open("labels.txt", "w")
     for i in range(len(layer_output)):
@@ -337,12 +380,12 @@ def train_cnn(word_dict, topics):
 
         print "Shape sir is", Y_train.shape
         cnn = Sequential()
-#        cnn.add(Dense(1000, input_dim=3657))
+#        cnn.add(Dense(1000, input_dim=14430))
 #        cnn.add(Dense(500, activation="tanh"))
         cnn.add(Convolution2D(16, 100, 1,
             border_mode="same",
             activation="relu",
-            input_shape=(1, 3657, 1)))
+            input_shape=(1, 14430, 1)))
         cnn.add(Convolution2D(8, 4, 1, border_mode="same", activation="relu"))
         cnn.add(MaxPooling2D(pool_size=(2, 1)))
 
