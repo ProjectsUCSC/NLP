@@ -8,6 +8,7 @@ from nltk.stem.porter import *
 import numpy as np
 import cPickle as pickle
 from collections import Counter
+from itertools import dropwhile
 from keras.models import model_from_json
 import math
 import signal
@@ -144,7 +145,7 @@ def cleanUrl(tweet):
     return tweet;
 
 def removeMention(tweet):
-    tweet = tweet.replace("rt@","").rstrip()
+    tweet= re.sub(r"rt@\S+", "",  tweet)
     tweet = tweet.replace("rt ","").rstrip()
     tweet = tweet.replace("@","").rstrip()
     return tweet;
@@ -162,6 +163,18 @@ def stemmer(preprocessed_data_sample):
         #No stemming
             preprocessed_data_sample[i] = preprocessed_data_sample[i].replace(preprocessed_data_sample[i], " ".join([str(word) for word in preprocessed_data_sample[i].split()]))
     return preprocessed_data_sample
+
+#usage : [all_words_list, words_with_min_freq, words_del] = get_word_frequency_lists(df, 3)
+#print len(all_words_list), len(words_with_min_freq), len(words_del)
+def get_word_frequency_lists(df, min_freq):
+    words = " ".join(df['tweet'])
+    counter =Counter(words.split())
+    all_words_list  = counter.keys()
+    for key, count in dropwhile(lambda key_count: key_count[1] >= min_freq, counter.most_common()):
+       del counter[key]
+    words_with_min_freq = counter.keys()
+    words_del = list(set(all_words_list) -set( words_with_min_freq ))
+    return [all_words_list, words_with_min_freq, words_del]
     
 def load_embeddings(file_name):
  
