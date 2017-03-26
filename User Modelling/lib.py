@@ -1,5 +1,9 @@
 import pandas as pd
 from pandas import DataFrame
+from keras.callbacks import History
+from itertools import dropwhile
+import gensim.models.word2vec as wv 
+history = History()
 import os
 from nltk.corpus import stopwords
 import re
@@ -8,7 +12,6 @@ from nltk.stem.porter import *
 import numpy as np
 import cPickle as pickle
 from collections import Counter
-from itertools import dropwhile
 from keras.models import model_from_json
 import math
 import signal
@@ -38,6 +41,11 @@ music = np.array(['bee gees', 'beyonce', 'bob marley', 'chris brown', 'david bow
 
 sports = np.array(['arsenal', 'barca', 'federer', 'floyd mayweather', 'hulk hogan', 'john cena', 'kris bryant', 'randy orton', 'real madrid', 'serena', 'messi', 'david beckham', 'rousey', 'super eagles', 'kane', 'red sox', 'white sox', 'chelsea', 'james franklin', 'billy cundiff', 'cundiff', 'tiger woods'])
 
+teech = np.array(['@microsoft', 'ac/dc', 'amazon', 'amazon prime', 'amazon prime day', 'amy schumer', 'angela merkel', 'ant-man', 'apple', 'apple watch', 'arsenal', 'bad blood', 'barca', 'batman', 'bbc', 'bee gees', 'bentley', 'bernie sanders', 'beyonce', 'big brother', 'bob marley', 'bobby jindal', 'boko haram', 'briana', 'brock lesnar', 'caitlyn jenner', 'calibraska', 'carly fiorina', 'cate blanchett', 'charlie hebdo', 'chelsea', 'chris brown', 'chris evans', 'christians', 'chuck norris', 'conor mcgregor', 'curtis', 'dana white', 'dark souls', 'david beckham', 'david bowie', 'david cameron', 'david price', 'david wright', 'dean ambrose', 'digi', 'disneyland', 'donald trump', 'dunkin', 'dustin johnson', 'ed sheeran', 'eid', 'erdogan', 'eric church', 'federer', 'fleetwood mac', 'floyd mayweather', 'foo fighters', 'frank gifford', 'frank ocean', 'galaxy note', 'game of thrones', 'gay', 'george harrison', 'george osborne', 'google', 'google+', 'grateful dead', 'gucci', 'hannibal', 'harper', 'harry potter', 'hillary', 'hulk hogan', 'ibm', 'ice cube', 'ihop', 'ios', 'ipad', 'iphone', 'ipod', 'ira', 'iran', 'iron maiden', 'islam', 'israel', 'janet jackson', 'jason aldean', 'jay-z', 'jeb bush', 'joe biden', 'john cena', 'john kasich', 'josh hamilton', 'jurassic park', 'jurassic world', 'justin', 'justin bieber', 'juventus', 'kane', 'kanye west', 'katy perry', 'kendrick', 'kendrick lamar', 'kerry', 'kim kardashian', 'kpop', 'kris bryant', 'kurt cobain', 'labor day', 'lady gaga', 'lexus', 'madonna', 'magic mike xxl', 'mariah carey', 'messi', 'metlife', 'michael jackson', 'michelle obama', 'milan', 'minecraft', 'miss usa', 'monsanto', 'moto g', 'murray', 'muslims', 'naruto', 'national hot dog day', 'national ice cream day', 'netflix', 'niall', 'nicki', 'nike', 'nintendo', 'nirvana', 'nokia', 'obama', 'oracle', 'paper towns', 'paul dunne', 'paul mccartney', 'planned parenthood', 'pope', 'pride parade', 'prince george', 'ps4', 'rahul gandhi', 'randy orton', 'real madrid', 'red sox', 'ric flair', 'rick perry', 'rolling stone', 'rousey', 'ryan braun', 'sam smith', 'sarah palin', 'saudi arabia', 'scott walker', 'scotus', 'seinfeld', 'serena', 'seth rollins', 'sharknado', 'shawn', 'snoop dogg', 'star wars day', 'super eagles', 'the vamps', 'thor', 'tom brady', 'tony blair', 'twilight', 'u2', 'watchman', 'white sox', 'yakub', 'yoga', 'zac brown band', 'zayn'])
+politics = np.array([])
+sports = np.array([])
+music = np.array([])
+
 filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
 
 filename2 = "full-corpus.csv"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
@@ -50,7 +58,23 @@ signal.signal(signal.SIGTSTP, handler)
 
 # In[2]:
 
+def get_word_frequency_lists(df, min_freq):
+
+    words = " ".join(df['tweet'])
+    counter =Counter(words.split())
+    all_words_list  = counter.keys()
+
+    for key, count in dropwhile(lambda key_count: key_count[1] >= min_freq, counter.most_common()):
+       del counter[key]
+
+    words_with_min_freq = counter.keys()
+    words_del = list(set(all_words_list) - set(words_with_min_freq))
+
+    return [all_words_list, words_with_min_freq, words_del]
+    
 def readData(filename1, filename2):
+    global tech, politics, music, sports
+    all_topics = np.concatenate((tech, politics, music, sports))
     cwd = os.getcwd()
 #    req_attributes = ['tweet_id', 'topic', 'sentiment', 'tweet']#, 'user_id']#, 'followers_count', 'statuses_count', 'description', 'friends_count', 'location']
 #    user_req_attributes = ['tweet_id', 'user_id']#, 'followers_count', 'statuses_count', 'description', 'friends_count', 'location']
@@ -62,34 +86,37 @@ def readData(filename1, filename2):
     tweet_df = tweet_df[tweet_req_attributes]
 #    print tweet_df['sentiment']
 
-    tweet_df.ix[tweet_df['sentiment']=='positive', 'sentiment'] = 5#1.5
+    tweet_df.ix[tweet_df['sentiment']=='positive', 'sentiment'] = 3#1.5
     tweet_df.ix[tweet_df['sentiment']=='neutral', 'sentiment'] = 0
-    tweet_df.ix[tweet_df['sentiment']=='negative', 'sentiment'] = -5#1.5
+    tweet_df.ix[tweet_df['sentiment']=='negative', 'sentiment'] = -3#1.5
 
     tweet_df['sentiment'] = pd.to_numeric(tweet_df['sentiment'], errors='coerce')
     tweet_df = tweet_df.dropna(subset=['sentiment'])
     
     tweet_df.ix[tweet_df['sentiment']==1, 'sentiment'] = 3#1.5
     tweet_df.ix[tweet_df['sentiment']==0, 'sentiment'] = 0
-    tweet_df.ix[tweet_df['sentiment']==-1, 'sentiment'] = -3
-    tweet_df.ix[tweet_df['sentiment']==-2, 'sentiment'] = -5
-    tweet_df.ix[tweet_df['sentiment']==2, 'sentiment'] = 5
+    tweet_df.ix[tweet_df['sentiment']==-1, 'sentiment'] = -3#3
+    tweet_df.ix[tweet_df['sentiment']==-2, 'sentiment'] = -3
+    tweet_df.ix[tweet_df['sentiment']==2, 'sentiment'] = 3
     
 #    tweet_df
 
-    path = cwd + "/data/" + filename2;
-    tweet_df2 = pd.read_csv(path, sep=',')
-    tweet_df2 = tweet_df2.drop_duplicates(['tweet_id'])
-    tweet_df2 = tweet_df2[tweet_req_attributes]
-#    tweet_df2['sentiment'] = pd.to_numeric(tweet_df2['sentiment'])
+#    path = cwd + "/data/" + filename2;
+#    tweet_df2 = pd.read_csv(path, sep=',')
+#    tweet_df2 = tweet_df2.drop_duplicates(['tweet_id'])
+#    tweet_df2 = tweet_df2[tweet_req_attributes]
+##    tweet_df2['sentiment'] = pd.to_numeric(tweet_df2['sentiment'])
 
-    tweet_df2 = tweet_df2[tweet_df2['sentiment'] != 'neutral']#.ix[tweet_df2['sentiment']=='neutral', 'sentiment'] = 0
-    tweet_df2.ix[tweet_df2['sentiment']=='positive', 'sentiment'] = 5#1.5
-    tweet_df2.ix[tweet_df2['sentiment']=='negative', 'sentiment'] = -5#1.5
-    tweet_df2 = tweet_df2[tweet_df2['sentiment'] != 'irrelevant']
-    
-    frame = [tweet_df, tweet_df2]
-    data = pd.concat(frame)
+#    tweet_df2 = tweet_df2[tweet_df2['sentiment'] != 'neutral']#.ix[tweet_df2['sentiment']=='neutral', 'sentiment'] = 0
+#    tweet_df2.ix[tweet_df2['sentiment']=='positive', 'sentiment'] = 3#1.5
+#    tweet_df2.ix[tweet_df2['sentiment']=='negative', 'sentiment'] = -3#1.5
+#    tweet_df2 = tweet_df2[tweet_df2['sentiment'] != 'irrelevant']
+#    
+#    frame = [tweet_df, tweet_df2]
+#    data = pd.concat(frame)
+   
+ #Hack - beware!
+    data = tweet_df
     print len(data)
 #    data = tweet_df.merge(user_df, left_on="tweet_id", right_on="tweet_id", how="inner")
     data = data.drop_duplicates(['tweet_id'])
@@ -99,19 +126,27 @@ def readData(filename1, filename2):
 #    df.ix[:, 'sentiment'] *= 2# genre[i]
     
 #    Drop random neutrals
+
+    data0 = data.query('sentiment == 0.0').sample(frac=.6, random_state=23)
+    data3 = data.query('sentiment == 3.0').sample(frac=.6, random_state=23)
+    
     print "l1", len(data)
-    data = data.drop(data.query('sentiment == 0.0').sample(frac=.4, random_state=23).index)
+    data = data.drop(data.query('sentiment == 0.0').sample(frac=.6, random_state=23).index)
     print "l2", len(data)
-    data = data.drop(data.query('sentiment == 3.0').sample(frac=.33, random_state=23).index)
+    data = data.drop(data.query('sentiment == 3.0').sample(frac=.6, random_state=23).index)
     print "l3", len(data)
     print "seed set"
+    data = data.sample(frac=1.0, random_state=23)
     print len(tweet_df), len(tweet_df2), len(data)
     
 #    print "From user data\n", Counter(list(data["user_id"])).most_common(50)
+    #data = data[data["topic"].isin(all_topics)]
     print Counter(data['sentiment'])
     print "indexes reset"
     data = data.reset_index()
-    return data#[req_attributes]
+    data0 = data0.reset_index()
+    data3 = data3.reset_index()
+    return [data, data0, data3]#[req_attributes]
 
 
 def tokenize_and_stopwords(data_sample):
@@ -126,7 +161,7 @@ def tokenize_and_stopwords(data_sample):
     except: 
         words = []
     
-    print "words", words
+#    print "words", words
 #    abb_dict = pickle.load(open("abbreviations", "r"))
     stop = stopwords.words('english') + words #list(string.punctuation) + ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     #Use only characters from reviews
@@ -145,7 +180,7 @@ def cleanUrl(tweet):
     return tweet;
 
 def removeMention(tweet):
-    tweet= re.sub(r"rt@\S+", "",  tweet)
+    tweet = tweet.replace("rt@","").rstrip()
     tweet = tweet.replace("rt ","").rstrip()
     tweet = tweet.replace("@","").rstrip()
     return tweet;
@@ -163,18 +198,6 @@ def stemmer(preprocessed_data_sample):
         #No stemming
             preprocessed_data_sample[i] = preprocessed_data_sample[i].replace(preprocessed_data_sample[i], " ".join([str(word) for word in preprocessed_data_sample[i].split()]))
     return preprocessed_data_sample
-
-#usage : [all_words_list, words_with_min_freq, words_del] = get_word_frequency_lists(df, 3)
-#print len(all_words_list), len(words_with_min_freq), len(words_del)
-def get_word_frequency_lists(df, min_freq):
-    words = " ".join(df['tweet'])
-    counter =Counter(words.split())
-    all_words_list  = counter.keys()
-    for key, count in dropwhile(lambda key_count: key_count[1] >= min_freq, counter.most_common()):
-       del counter[key]
-    words_with_min_freq = counter.keys()
-    words_del = list(set(all_words_list) -set( words_with_min_freq ))
-    return [all_words_list, words_with_min_freq, words_del]
     
 def load_embeddings(file_name):
  
@@ -207,4 +230,3 @@ def vectorize(preprocessed_data_sample):
     # array
     train_data_features = train_data_features.toarray()
     return [train_data_features, vectorizer, no_features]
-

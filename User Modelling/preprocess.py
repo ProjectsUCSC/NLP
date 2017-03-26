@@ -1,3 +1,4 @@
+#preprocess
 from lib import *
 #import pandas as pd
 #from pandas import DataFrame
@@ -204,8 +205,10 @@ def get_genre_score(df, word):#df[df["topic"].isin(genre_topics[iter])])
 def preprocess(filename1, filename2):
 
     global tech, politics, sports, music, genre
+    print "new!!"
     #filename = "Homework2_data.csv"
     df = readData(filename1, filename2)
+    df = df[0:15000]
     print "length of df is", len(df)
 #    print "from joined data\n", Counter(list(df["user_id"])).most_common(50)
     indices = []
@@ -220,11 +223,11 @@ def preprocess(filename1, filename2):
     print df["sentiment"].mean()
     print sum(l) / float(len(l))
 #    df['tokenized_sents'] = df.apply(lambda row: nltk.word_tokenize(row['tweet']), axis=1)
-    all_topics = np.concatenate((tech, politics, music, sports))
+    all_topics = list(set(df['topic']))
     
 #    Remove topics of no interest
 
-    df = df[df["topic"].isin(all_topics)]
+#    df = df[df["topic"].isin(all_topics)]
 
     
     print "remove unnecessary\n", set(df["topic"])
@@ -250,13 +253,14 @@ def preprocess(filename1, filename2):
             
 #    embed_data = 
 #    data = shuffle(data)
-    topics = list(data["topic"])
+    topics = set(list(data["topic"]))
     print "after grouping\n", topics
 #    Watch out - only ten topics
 #    topics = topics[0:10]
 
     for i in range(len(data)):
-        data['tweet'][i] = " ".join(data['tweet'][i])
+ 
+         data['tweet'][i] = " ".join(data['tweet'][i])
 #    print topics
 #    data = data[data["topic"] in  ]
 #    Word topic mapping
@@ -266,14 +270,20 @@ def preprocess(filename1, filename2):
     tweets = ""
 
 #    Generating vocabulary
-    for index, i in data.iterrows():
-#        for i in data['tweet']:
-        if i['topic'] in topics:
-            tweets += str(i['tweet'])
-    
+#    for index, i in data.iterrows():
+##        for i in data['tweet']:
+#       # if i['topic'] in topics:
+#        tweets += str(i['tweet'])
+#    
     word_dict = {}
-    tweets = list(set(tweets.split()))
-    all_vocab = tweets
+#    all_vocab = list(set(tweets.split()))
+    [all_words_list, words_with_min_freq, words_del] = get_word_frequency_lists(data, 3)
+#    print words_with_min_freq
+#    print "\n\n"
+#    print words_del
+    print "min freq count:", len(words_with_min_freq)
+    all_vocab = all_words_list#
+    #all_vocab = tweets
 
 #        for word in tweets:
                         
@@ -289,6 +299,7 @@ def preprocess(filename1, filename2):
 #    print len(word_dict)
 #    Word model
     try:
+        print "loading"
         json_file = open('model.json', 'r')
         loaded_model_json = json_file.read()
         json_file.close()
@@ -296,11 +307,12 @@ def preprocess(filename1, filename2):
         # load weights into new model
         model.load_weights("model.h5")
         [X_train, Y_train] = pickle.load(open("train_data", "r"))
+        X_train = X_train.reshape(len(X_train), 1, len(X_train[0]), 1)
         vocab = pickle.load(open("vocab_tsne", "r"))
-        
+        print "loaded"
     except:
         print "now entering"
-        [model, X_train, Y_train, vocab] = train_cnn(word_dict, topics, df, all_vocab)
+        [model, X_train, Y_train, vocab] = train_cnn(word_dict, topics, df, all_vocab, words_with_min_freq, all_topics)
         pickle.dump(vocab, open("vocab_tsne", "wb"))
         try:
             model_json = model.to_json()
@@ -313,10 +325,16 @@ def preprocess(filename1, filename2):
             try:
                 pickle.dump(model, open("model", "wb"))
             except:
-                print "dumping failed"
+                print "dumping model failed"
     
 #    Prediction
     y = model.predict(X_train, batch_size = 100)#, Y_train, batch_size=32, verbose=1, sample_weight=None)
+    try:
+#        pickle.dump([all_vocab, y], open("visualize", "wb"))
+        print "pickled visualizations"
+    except:
+        print "couldn't pickle visual"
+        
     print "This is the prediction"
 #    y[y >= 0.1] = 1
 #    y[y < 0.1] = 0
@@ -333,11 +351,11 @@ def preprocess(filename1, filename2):
     
 #    
 #    Hidden state
-#    get_last_layer_output = K.function([model.layers[0].input, K.learning_phase()],
-#                                  [model.layers[6].output])
+    get_last_layer_output = K.function([model.layers[0].input, K.learning_phase()],
+                                  [model.layers[7].output])
 
-    get_last_layer_output = K.function([model.layers[0].input],
-                                  [model.layers[4].output])
+#    get_last_layer_output = K.function([model.layers[0].input],
+#                                  [model.layers[4].output])
 
 # output in train mode = 0
 #    layer_output = np.array(get_last_layer_output([X_train[0:1200], 0])[0])
@@ -376,9 +394,15 @@ def preprocess(filename1, filename2):
 #    f2 = open("labels.txt", "w")
     
     word2topic = {}
+    embedding = {}
     for i in range(len(vocab)):
         word2topic[vocab[i]] = layer_output[i]
-    pickle.dump(word2topic, open("word2topic", "wb"))
+        embedding[vocab[i]] = y[i]
+    try:
+        pickle.dump(word2topic, open("word2topic", "wb"))
+        pickle.dump(embedding, open("embedding", "wb"))
+    except:
+        "pickling word2vec failed"
 #    for i in range(len(layer_output)):
 #        f1.write(str(layer_output[i]) + str("\n"))
 #        f2.write(str(vocab[i]) + str("\n"))
@@ -386,13 +410,16 @@ def preprocess(filename1, filename2):
 #    f2.close()
 
 
-def train_cnn(word_dict, topics, df, vocab):
+def train_cnn(word_dict, topics, df, vocab, words_with_min_freq, all_topics):
 
-    global K, genre_topics
+    global K, genre_topics, tech, politics, music, sports, history
+    print "not using topics"
+    topics = None
 #    with K.tf.device('/gpu:1'):
     gpu_options = K.tf.GPUOptions(per_process_gpu_memory_fraction=0.8)#0.2)
     sess = K.tf.Session(config=K.tf.ConfigProto(gpu_options=gpu_options))
 #        K._set_session(K.tf.Session(config=K.tf.ConfigProto(allow_soft_placement=True, log_device_placement=True)))
+    #all_topics = list(set(df['topic']))#np.concatenate((tech, politics, music, sports))
     try:
         X_train = []#np.array([])
         Y_train = []#np.array([])
@@ -413,7 +440,7 @@ def train_cnn(word_dict, topics, df, vocab):
             for i in range(len(vocab)):
                 if i % 100 == 0:
                     print i
-                c = np.zeros(len(topics))
+                c = np.zeros(len(all_topics))
                 c_x = np.zeros(len(vocab))
     #            for i in range(len(topics)):
     #                print topics[i], word_
@@ -424,29 +451,33 @@ def train_cnn(word_dict, topics, df, vocab):
                 X_train.append(c_x)# = np.append(X_train, c_x)
     #            if True:
                 try:#buggy, fews words aren't found in any topics, weird, space removed by mistake.'
-                    for iter in range(len(topics)):
-    #                    print df["topic"]
-    #                    print genre[iter]
-    #                    print df["topic"] == genre[iter]
-    #                    print df[df["topic"] == genre[iter]] 
-    #                    c[iter] = get_genre_score(df[df["topic"] == genre[iter]], vocab[i])
-                        op = df[df["topic"] == topics[iter]]
-    #                    df_temp = op[op["tweet"].str.contains(vocab[i], na=False)]
-                        c[iter] = op[op["tweet"].str.contains(vocab[i], na=False)]["sentiment"].mean()#get_genre_score(df[df["topic"] == topics[iter]], vocab[i])
-    #                    assert False
-    #                    c[iter] = df[df["topic"].isin(genre_topics[iter])]["tweet"].str.contains(word, na=False)["sentiment"].mean()
-    #                c[locations] = 1
-    #                print len(c_x)
-                    Y_train.append(c)# = np.append(Y_train, c)
-    #                print "atleast"
-        #            print locations
+                    #all_topics = list(set(df['topic'])) 
+                    if vocab[i] in words_with_min_freq:                    
+                        for iter in range(len(all_topics)):
+        #                    print df["topic"]
+        #                    print genre[iter]
+        #                    print df["topic"] == genre[iter]
+        #                    print df[df["topic"] == genre[iter]] 
+        #                    c[iter] = get_genre_score(df[df["topic"] == genre[iter]], vocab[i])
+                            op = df[df["topic"] == all_topics[iter]]
+        #                    df_temp = op[op["tweet"].str.contains(vocab[i], na=False)]
+                            c[iter] = op[op["tweet"].str.contains(vocab[i], na=False)]["sentiment"].mean()#get_genre_score(df[df["topic"] == topics[iter]], vocab[i])
+        #                    assert False
+        #                    c[iter] = df[df["topic"].isin(genre_topics[iter])]["tweet"].str.contains(word, na=False)["sentiment"].mean()
+        #                c[locations] = 1
+        #                print len(c_x)
+                        Y_train.append(c)# = np.append(Y_train, c)
+        #                print "atleast"
+            #            print locations
+                    else:
+                        assert False
     #            else:
     #                e = 1
                 except Exception as e:
-                    print "this is the error", e
-                    assert False
-                    print "couldn't find", vocab[i]
-                    Y_train.append(np.zeros(len(topics)))
+#                    print "this is the error", e
+#                    assert False
+#                    print "couldn't find", vocab[i]
+                    Y_train.append(np.zeros(len(all_topics)))
     #                print "l is",# locations, word 
                  #This could be buggy
             
@@ -459,8 +490,10 @@ def train_cnn(word_dict, topics, df, vocab):
         #    Y_train = csr_matrix(Y_train)#
             Y_train = np.array(Y_train).astype('float16')
             Y_train = np.nan_to_num(Y_train)
-            pickle.dump([X_train, Y_train], open("train_data", "wb"))
-        
+            try:
+                pickle.dump([X_train, Y_train], open("train_data", "wb"))
+            except:
+                "pickling data failed"
         print "after"
 #        print X_train
         for counter in range(10):
@@ -479,9 +512,11 @@ def train_cnn(word_dict, topics, df, vocab):
             border_mode="same",
             activation="relu",
             input_shape=(1, X_train.shape[0], 1)))
+        cnn.add(Dropout(0.2))
         cnn.add(Convolution2D(8, 4, 1, border_mode="same", activation="relu"))
+        cnn.add(Dropout(0.2))
         cnn.add(MaxPooling2D(pool_size=(2, 1)))
-
+        
 ##        cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
 ##        cnn.add(Convolution2D(64, 3, 1, border_mode="same", activation="relu"))
 ###        cnn.add(Convolution2D(128, 3, 1, border_mode="same", activation="relu"))
@@ -493,12 +528,13 @@ def train_cnn(word_dict, topics, df, vocab):
 #        cnn.add(MaxPooling2D(pool_size=(2, 1)))
 #            
         cnn.add(Flatten())
+        cnn.add(Dropout(0.2))
 #        cnn.add(Dropout(0.2))
         cnn.add(Dense(100, activation="linear"))
 #        cnn.add(Dense(100, activation="tanh"))
-#        cnn.add(Dropout(0.2))
+        cnn.add(Dropout(0.2))
 #    #    cnn.add(Dense(3, activation="softmax"))
-        cnn.add(Dense(len(topics), activation="linear"))
+        cnn.add(Dense(len(all_topics), activation="linear"))
         # define optimizer and objective, compile cnn
 
 #        cnn.compile(loss="categorical_crossentropy", batch_size=32, optimizer="adam")
@@ -507,11 +543,12 @@ def train_cnn(word_dict, topics, df, vocab):
 
 #        cnn.fit(X_train, Y_train, nb_epoch=20, show_accuracy=True)
 #        sgd = SGD(lr=1e-3, decay=1e-6, momentum=0.9, nesterov=True)
-        adam = Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+        adam = Adam(lr=0.0006, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
         cnn.compile(loss='mean_squared_error', optimizer=adam, batch_size=32)
+        print history
     #    print X_train[0:5]
     #    print Y_train[0:5]
-        cnn.fit(X_train, Y_train, batch_size=32, epochs=30)
+        cnn.fit(X_train, Y_train, batch_size=32, epochs=10)
         print "Done training, returning model"
         return [cnn, X_train, Y_train, vocab]
     except KeyboardInterrupt:
