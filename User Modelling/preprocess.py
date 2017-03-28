@@ -207,7 +207,7 @@ def preprocess(filename1, filename2):
     global tech, politics, sports, music, genre
     print "new!!"
     #filename = "Homework2_data.csv"
-    df = readData(filename1, filename2)
+    [df, df0, df3] = readData(filename1, filename2)
     df = df[0:15000]
     print "length of df is", len(df)
 #    print "from joined data\n", Counter(list(df["user_id"])).most_common(50)
@@ -412,7 +412,7 @@ def preprocess(filename1, filename2):
 
 def train_cnn(word_dict, topics, df, vocab, words_with_min_freq, all_topics):
 
-    global K, genre_topics, tech, politics, music, sports, history
+    global K, genre_topics, tech, politics, music, sports, history, req_pos_tags
     print "not using topics"
     topics = None
 #    with K.tf.device('/gpu:1'):
@@ -451,32 +451,37 @@ def train_cnn(word_dict, topics, df, vocab, words_with_min_freq, all_topics):
                 X_train.append(c_x)# = np.append(X_train, c_x)
     #            if True:
                 try:#buggy, fews words aren't found in any topics, weird, space removed by mistake.'
-                    #all_topics = list(set(df['topic'])) 
-                    if vocab[i] in words_with_min_freq:                    
-                        for iter in range(len(all_topics)):
-        #                    print df["topic"]
-        #                    print genre[iter]
-        #                    print df["topic"] == genre[iter]
-        #                    print df[df["topic"] == genre[iter]] 
-        #                    c[iter] = get_genre_score(df[df["topic"] == genre[iter]], vocab[i])
-                            op = df[df["topic"] == all_topics[iter]]
-        #                    df_temp = op[op["tweet"].str.contains(vocab[i], na=False)]
-                            c[iter] = op[op["tweet"].str.contains(vocab[i], na=False)]["sentiment"].mean()#get_genre_score(df[df["topic"] == topics[iter]], vocab[i])
-        #                    assert False
-        #                    c[iter] = df[df["topic"].isin(genre_topics[iter])]["tweet"].str.contains(word, na=False)["sentiment"].mean()
-        #                c[locations] = 1
-        #                print len(c_x)
+                    #all_topics = list(set(df['topic']))
+                    tag = CMUTweetTagger.runtagger_parse(list(vocab[i]))[0][0][1]
+#                    print tag 
+                    if (vocab[i] in words_with_min_freq):                    
+                            
+                        if tag in req_pos_tags:
+                            for iter in range(len(all_topics)):
+                            
+            #                    print df["topic"]
+            #                    print genre[iter]
+            #                    print df["topic"] == genre[iter]
+            #                    print df[df["topic"] == genre[iter]] 
+            #                    c[iter] = get_genre_score(df[df["topic"] == genre[iter]], vocab[i])
+                                op = df[df["topic"] == all_topics[iter]]
+            #                    df_temp = op[op["tweet"].str.contains(vocab[i], na=False)]
+                                c[iter] = op[op["tweet"].str.contains(vocab[i], na=False)]["sentiment"].mean()#get_genre_score(df[df["topic"] == topics[iter]], vocab[i])
+            #                    assert False
+            #                    c[iter] = df[df["topic"].isin(genre_topics[iter])]["tweet"].str.contains(word, na=False)["sentiment"].mean()
+            #                c[locations] = 1
+            #                print len(c_x)
                         Y_train.append(c)# = np.append(Y_train, c)
         #                print "atleast"
             #            print locations
-                    else:
-                        assert False
+#                    else:
+#                        assert False
     #            else:
     #                e = 1
                 except Exception as e:
 #                    print "this is the error", e
 #                    assert False
-#                    print "couldn't find", vocab[i]
+                    print "couldn't find", vocab[i]
                     Y_train.append(np.zeros(len(all_topics)))
     #                print "l is",# locations, word 
                  #This could be buggy
