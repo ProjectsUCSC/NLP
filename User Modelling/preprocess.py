@@ -448,7 +448,7 @@ def train_cnn(word_dict, topics, df, vocab, words_with_min_freq, all_topics):
     #            locations = np.array([j for j in range(len(topics)) if topics[j] in word_dict[vocab[i]]])
     #            print locations
                 c_x[i] = 1
-                X_train.append(c_x)# = np.append(X_train, c_x)
+                # = np.append(X_train, c_x)
     #            if True:
                 try:#buggy, fews words aren't found in any topics, weird, space removed by mistake.'
                     #all_topics = list(set(df['topic']))
@@ -472,6 +472,7 @@ def train_cnn(word_dict, topics, df, vocab, words_with_min_freq, all_topics):
             #                c[locations] = 1
             #                print len(c_x)
                         Y_train.append(c)# = np.append(Y_train, c)
+                        X_train.append(c_x)
         #                print "atleast"
             #            print locations
 #                    else:
