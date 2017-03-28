@@ -10,6 +10,7 @@ import re
 #import enchant
 from nltk.stem.porter import *
 import numpy as np
+np.random.seed(1337)
 import cPickle as pickle
 from collections import Counter
 from keras.models import model_from_json
@@ -29,6 +30,7 @@ import codecs
 import pylab as plot
 import random
 from sklearn.utils import shuffle
+import CMUTweetTagger
 import nltk
 K.set_image_dim_ordering('th')
 
@@ -41,7 +43,7 @@ music = np.array(['bee gees', 'beyonce', 'bob marley', 'chris brown', 'david bow
 
 sports = np.array(['arsenal', 'barca', 'federer', 'floyd mayweather', 'hulk hogan', 'john cena', 'kris bryant', 'randy orton', 'real madrid', 'serena', 'messi', 'david beckham', 'rousey', 'super eagles', 'kane', 'red sox', 'white sox', 'chelsea', 'james franklin', 'billy cundiff', 'cundiff', 'tiger woods'])
 
-teech = np.array(['@microsoft', 'ac/dc', 'amazon', 'amazon prime', 'amazon prime day', 'amy schumer', 'angela merkel', 'ant-man', 'apple', 'apple watch', 'arsenal', 'bad blood', 'barca', 'batman', 'bbc', 'bee gees', 'bentley', 'bernie sanders', 'beyonce', 'big brother', 'bob marley', 'bobby jindal', 'boko haram', 'briana', 'brock lesnar', 'caitlyn jenner', 'calibraska', 'carly fiorina', 'cate blanchett', 'charlie hebdo', 'chelsea', 'chris brown', 'chris evans', 'christians', 'chuck norris', 'conor mcgregor', 'curtis', 'dana white', 'dark souls', 'david beckham', 'david bowie', 'david cameron', 'david price', 'david wright', 'dean ambrose', 'digi', 'disneyland', 'donald trump', 'dunkin', 'dustin johnson', 'ed sheeran', 'eid', 'erdogan', 'eric church', 'federer', 'fleetwood mac', 'floyd mayweather', 'foo fighters', 'frank gifford', 'frank ocean', 'galaxy note', 'game of thrones', 'gay', 'george harrison', 'george osborne', 'google', 'google+', 'grateful dead', 'gucci', 'hannibal', 'harper', 'harry potter', 'hillary', 'hulk hogan', 'ibm', 'ice cube', 'ihop', 'ios', 'ipad', 'iphone', 'ipod', 'ira', 'iran', 'iron maiden', 'islam', 'israel', 'janet jackson', 'jason aldean', 'jay-z', 'jeb bush', 'joe biden', 'john cena', 'john kasich', 'josh hamilton', 'jurassic park', 'jurassic world', 'justin', 'justin bieber', 'juventus', 'kane', 'kanye west', 'katy perry', 'kendrick', 'kendrick lamar', 'kerry', 'kim kardashian', 'kpop', 'kris bryant', 'kurt cobain', 'labor day', 'lady gaga', 'lexus', 'madonna', 'magic mike xxl', 'mariah carey', 'messi', 'metlife', 'michael jackson', 'michelle obama', 'milan', 'minecraft', 'miss usa', 'monsanto', 'moto g', 'murray', 'muslims', 'naruto', 'national hot dog day', 'national ice cream day', 'netflix', 'niall', 'nicki', 'nike', 'nintendo', 'nirvana', 'nokia', 'obama', 'oracle', 'paper towns', 'paul dunne', 'paul mccartney', 'planned parenthood', 'pope', 'pride parade', 'prince george', 'ps4', 'rahul gandhi', 'randy orton', 'real madrid', 'red sox', 'ric flair', 'rick perry', 'rolling stone', 'rousey', 'ryan braun', 'sam smith', 'sarah palin', 'saudi arabia', 'scott walker', 'scotus', 'seinfeld', 'serena', 'seth rollins', 'sharknado', 'shawn', 'snoop dogg', 'star wars day', 'super eagles', 'the vamps', 'thor', 'tom brady', 'tony blair', 'twilight', 'u2', 'watchman', 'white sox', 'yakub', 'yoga', 'zac brown band', 'zayn'])
+tech = np.array(['@microsoft', 'ac/dc', 'amazon', 'amazon prime', 'amazon prime day', 'amy schumer', 'angela merkel', 'ant-man', 'apple', 'apple watch', 'arsenal', 'bad blood', 'barca', 'batman', 'bbc', 'bee gees', 'bentley', 'bernie sanders', 'beyonce', 'big brother', 'bob marley', 'bobby jindal', 'boko haram', 'briana', 'brock lesnar', 'caitlyn jenner', 'calibraska', 'carly fiorina', 'cate blanchett', 'charlie hebdo', 'chelsea', 'chris brown', 'chris evans', 'christians', 'chuck norris', 'conor mcgregor', 'curtis', 'dana white', 'dark souls', 'david beckham', 'david bowie', 'david cameron', 'david price', 'david wright', 'dean ambrose', 'digi', 'disneyland', 'donald trump', 'dunkin', 'dustin johnson', 'ed sheeran', 'eid', 'erdogan', 'eric church', 'federer', 'fleetwood mac', 'floyd mayweather', 'foo fighters', 'frank gifford', 'frank ocean', 'galaxy note', 'game of thrones', 'gay', 'george harrison', 'george osborne', 'google', 'google+', 'grateful dead', 'gucci', 'hannibal', 'harper', 'harry potter', 'hillary', 'hulk hogan', 'ibm', 'ice cube', 'ihop', 'ios', 'ipad', 'iphone', 'ipod', 'ira', 'iran', 'iron maiden', 'islam', 'israel', 'janet jackson', 'jason aldean', 'jay-z', 'jeb bush', 'joe biden', 'john cena', 'john kasich', 'josh hamilton', 'jurassic park', 'jurassic world', 'justin', 'justin bieber', 'juventus', 'kane', 'kanye west', 'katy perry', 'kendrick', 'kendrick lamar', 'kerry', 'kim kardashian', 'kpop', 'kris bryant', 'kurt cobain', 'labor day', 'lady gaga', 'lexus', 'madonna', 'magic mike xxl', 'mariah carey', 'messi', 'metlife', 'michael jackson', 'michelle obama', 'milan', 'minecraft', 'miss usa', 'monsanto', 'moto g', 'murray', 'muslims', 'naruto', 'national hot dog day', 'national ice cream day', 'netflix', 'niall', 'nicki', 'nike', 'nintendo', 'nirvana', 'nokia', 'obama', 'oracle', 'paper towns', 'paul dunne', 'paul mccartney', 'planned parenthood', 'pope', 'pride parade', 'prince george', 'ps4', 'rahul gandhi', 'randy orton', 'real madrid', 'red sox', 'ric flair', 'rick perry', 'rolling stone', 'rousey', 'ryan braun', 'sam smith', 'sarah palin', 'saudi arabia', 'scott walker', 'scotus', 'seinfeld', 'serena', 'seth rollins', 'sharknado', 'shawn', 'snoop dogg', 'star wars day', 'super eagles', 'the vamps', 'thor', 'tom brady', 'tony blair', 'twilight', 'u2', 'watchman', 'white sox', 'yakub', 'yoga', 'zac brown band', 'zayn'])
 politics = np.array([])
 sports = np.array([])
 music = np.array([])
@@ -50,6 +52,8 @@ filename1 = "tweets.txt"#twitter-2016dev-CE-output.txt_semeval_tweets.txt"
 
 filename2 = "full-corpus.csv"#"twitter-2016dev-CE-output.txt_semeval_userinfo.txt"
 
+req_pos_tags = ['N', 'S', 'Z', 'V', '^', 'A', 'R']
+all_tags = {'N':0, 'O':1, '^':2, 'S':3, 'Z':4, 'V':5, 'L':6, 'M':7, 'A':8, 'R':9, '!':10, 'D':11, 'P':12, '&':13, 'T':14, 'X':15, 'Y':16, '#':17, '@':18, 'U':19, 'E':20, '$':21, ',':22, 'G':23, '~':24, 'NA':25}
 
 def handler(signum, frame):
     print 'Ctrl+Z pressed'
@@ -137,7 +141,6 @@ def readData(filename1, filename2):
     print "l3", len(data)
     print "seed set"
     data = data.sample(frac=1.0, random_state=23)
-    print len(tweet_df), len(tweet_df2), len(data)
     
 #    print "From user data\n", Counter(list(data["user_id"])).most_common(50)
     #data = data[data["topic"].isin(all_topics)]
@@ -146,6 +149,8 @@ def readData(filename1, filename2):
     data = data.reset_index()
     data0 = data0.reset_index()
     data3 = data3.reset_index()
+    print len(data)
+
     return [data, data0, data3]#[req_attributes]
 
 
