@@ -236,6 +236,7 @@ def getPOSencoding(sentence, all_tags):
     
 #getEmbedding(df['tokenized_sents'][0])
 
+
 def run_model():
     
         global tech, politics, sports, music, genre, max_words, depth_embed, depth_distance, word2topic, vocab, K, all_tags
@@ -265,7 +266,9 @@ def run_model():
             print "topics never seen again", train_topics - test_topics
             #df = df[df["topic"].isin(all_topics)]
             df['sentiment'] = pd.to_numeric(df['sentiment'])
-            
+
+            #### new code to add prior sentiment
+            df['prior_sent'] =  df['tweet'].apply(nltk_sentiment)
             frame = [df0, df3]
             df_test = pd.concat(frame)
             df_test['sentiment'] = pd.to_numeric(df_test['sentiment'])
@@ -417,7 +420,7 @@ def run_model():
 #                "dumping data failed"
         print len(X[0])
         print len(X)
-
+        X = np.concatenate((X, df['priot_sent'].T), axis=1)
         X_train = X[0:12200]
         X_test = X[12200:]
 #        X_train = np.concatenate((X_train, X_train_w), axis=1)
