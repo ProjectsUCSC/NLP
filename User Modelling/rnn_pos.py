@@ -420,7 +420,10 @@ def run_model():
 #                "dumping data failed"
         print len(X[0])
         print len(X)
-        X = np.concatenate((X, df['priot_sent'].T), axis=1)
+        prior = df['prior_sent']
+        prior_train =prior[0:12200]
+        prior_test=prior[12200:]
+        #X = np.concatenate((X, df['prior_sent'].T), axis=1)
         X_train = X[0:12200]
         X_test = X[12200:]
 #        X_train = np.concatenate((X_train, X_train_w), axis=1)
@@ -562,8 +565,10 @@ def run_model():
 #####            model.add(Bidirectional(LSTM(2*max_words, activation='relu', return_sequences=True)))#)))
 #####            model.add(Dropout(0.2))
             model.add(Bidirectional(LSTM(max_words, activation='relu')))#, return_sequences=True)))#)))
+
             model.add(Dropout(0.2))
             model.add(Dense(3, activation="softmax"))
+
 #            model.add(LSTM(1, activation="linear"))
     #        optimizer = RMSprop(lr=0.01)
     #        model.compile(loss='categorical_crossentropy', optimizer=optimizer)
