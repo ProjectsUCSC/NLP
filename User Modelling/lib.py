@@ -32,6 +32,8 @@ import random
 from sklearn.utils import shuffle
 import CMUTweetTagger
 import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+
 K.set_image_dim_ordering('th')
 
 genre = np.array(['tech', 'politics', 'music', 'sports'])
@@ -235,13 +237,10 @@ def vectorize(preprocessed_data_sample):
     # array
     train_data_features = train_data_features.toarray()
     return [train_data_features, vectorizer, no_features]
-
+    
+    
 def nltk_sentiment(text):
 
-    from nltk.sentiment import SentimentIntensityAnalyzer
     sid = SentimentIntensityAnalyzer()
-    ss=  sid.polarity_scores(text)
-    return  ss['compound']
-
-
-
+    ss = sid.polarity_scores(text)
+    return ss.values()
