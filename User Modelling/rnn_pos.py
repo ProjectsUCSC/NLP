@@ -5,7 +5,6 @@ import copy
 from collections import Counter
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
-from keras.layers.wrappers import TimeDistributed
 import math
 
 word2topic = pickle.load(open("word2topic", "r"))
@@ -13,7 +12,7 @@ embedding = pickle.load(open("word2topic", "r"))
 
 #embedding = pickle.load(open("embedding", "r"))
 vocab = word2topic.keys()
-max_words = 25#30
+max_words = 20#30
 depth_embed = 100#370
 depth_distance = 100#368#70#100
 
@@ -39,8 +38,7 @@ def get_topic_rep(topic, word2topic, word2vec):
 
     global vocab
     topics = str(topic).split(' ')
-#    v = np.zeros(np.concatenate((word2topic['donald'], word2vec.wv['donald'])).shape)
-    v = np.zeros(word2topic['donald'].shape)
+    v = np.zeros(np.concatenate((word2topic['donald'], word2vec.wv['donald'])).shape)
     counter = 0
 #    if topics[0] in vocab:
 #        v = np.append(v, word#2topic[topics[0]])
@@ -50,11 +48,9 @@ def get_topic_rep(topic, word2topic, word2vec):
         if topics[counter] in vocab:
 #            print topics[counter]
             try:
-#                v += np.concatenate((word2topic[topics[counter]], word2vec.wv[topics[counter]]))
-                v += word2topic[topics[counter]]
+                v += np.concatenate((word2topic[topics[counter]], word2vec.wv[topics[counter]]))
             except:
-#                v += np.concatenate((word2topic[topics[counter]], np.zeros(word2vec.wv['donald'].shape)))
-                v += word2topic[topics[counter]]
+                v += np.concatenate((word2topic[topics[counter]], np.zeros(word2vec.wv['donald'].shape)))
 #    print counter + 1
     v /= (counter + 1) * 1.0
 #    print type(v)
@@ -80,9 +76,9 @@ def custom_loss(y_true, y_pred):
 def evaluate(y_test, thresholded_pred):
 
     print "accuracy", (sum(abs(y_test == thresholded_pred))) / float(len(thresholded_pred))
-    print "true labels", Counter(y_test)
-    print "predictions", Counter(thresholded_pred)
-    print "Confusion matrix", confusion_matrix(y_test, thresholded_pred)
+    print Counter(y_test)
+    print Counter(thresholded_pred)
+    print confusion_matrix(y_test, thresholded_pred)
     print "f1 is", f1_score(y_test, thresholded_pred, average='macro')
         
 def distance_embed(sentence):
@@ -151,7 +147,7 @@ def convertToOneHot(vector, num_classes=None):
     output array.
 
     Example:
-        v = np.array((1, 0, 1))
+        v = np.array((1, 0, 4))
         one_hot_v = convertToOneHot(v)
         print one_hot_v
 
@@ -345,7 +341,7 @@ def run_model():
 #            model.init_sims(replace=True)
                 print "loaded"
             except:
-                word2vec = wv.Word2Vec(df["tokenized_sents"], size=depth_embed, window=5, min_count=5, workers=1)
+                word2vec = wv.Word2Vec(df["tokenized_sents"], size=depth_embed, window=5, min_count=5, workers=4)
                 word2vec.save("word2vec")
 
             #X.shape[0]#7349
@@ -358,8 +354,8 @@ def run_model():
 #            print df['word2vec'][0:5]
             X = list(df['embedding'])
             X_w = list(df['word2vec'])
-            X = np.reshape(np.ravel(X), (len(X), 1, max_words, depth_embed, 1))
-            X_w = np.reshape(np.ravel(X_w), (len(X_w), 1, max_words, length, 1))#depth_embed))
+            X = np.reshape(np.ravel(X), (len(X), max_words, depth_embed))
+            X_w = np.reshape(np.ravel(X_w), (len(X_w), max_words, length))#depth_embed))
 #            a = copy.deepcopy(X)#np.array(df['embedding'])
 
             df['tweet_rep'] = df['tokenized_sents'].apply(distance_embed)
@@ -377,33 +373,28 @@ def run_model():
 #            a = copy.deepcopy(X)#np.array(df['embedding'])
 
             df_test['tweet_rep'] = df_test['tokenized_sents'].apply(distance_embed)
+####            a = list(df['tweet_rep'])
+####            a = np.reshape(np.ravel(a), (len(a), max_words, depth_distance))            
             df_test['topic_rep'] = df_test['topic'].apply(get_topic_rep, args=(word2topic, word2vec,))
-            
-#            Prior sentiment
-#            df['prior_sent'] =  df['tweet'].apply(nltk_sentiment)
-#            X_prior = list(df['prior_sent'])
-#            X_prior = np.reshape(np.ravel(X_prior), (len(X_prior), 4, 1))
 
-            a = list(df['tweet_rep'])
-            a = np.reshape(np.ravel(a), (len(a), max_words, depth_distance))            
 
+            d = []
 #            a = np.reshape(a, ())
-            b = list(df['topic_rep'])
+####            b = list(df['topic_rep'])
 ####            print b[0]
 #            print b
 #            print b.shape
-            b = np.reshape(np.ravel(np.ravel(b)), (len(b), 1, depth_distance))
+####            b = np.reshape(np.ravel(np.ravel(b)), (X.shape[0], 1, depth_distance))
 
-            c = (a - b)**2
-#            d = []
-#            for i1 in range(len(c)):
-#                for j1 in range(len(c[0])):
-#                    d.append(abs(sum(c[i1][j1])))
-#            d = np.array(d)
-            d = c
-            d = np.reshape(d, (len(a), max_words, depth_distance))
-#            d[d==0] = 0.1
-#            d = 1.0 / d
+#####            c = (a - b)**2
+######            d = c
+#####            for i1 in range(len(c)):
+#####                for j1 in range(len(c[0])):
+#####                    d.append(abs(sum(c[i1][j1])))
+#####            d = np.array(d)
+#####            d = np.reshape(d, (len(a), max_words))
+#####            d[d==0] = 0.1
+#####            d = 1.0 / d
 #####            print "d[0] is !!!", d[0]
 
 
@@ -434,10 +425,6 @@ def run_model():
         X_test_w = X_w[12200:]
         y_train = y[0:12200]
         y_test = y[12200:]
-
-#        X_train_prior = X_prior[0:12200]
-#        X_test_prior = X_prior[12200:]
-
         print " Y train!!\n", y_train[0:5]
         print list(df['sentiment'])[0:5]
         print y_test[0:5]
@@ -445,8 +432,6 @@ def run_model():
         
         one_hot_test_global = []
 
-        one_hot = np.array((pd.get_dummies(df['topic'])))
-        one_hot = np.reshape(np.ravel(np.ravel(one_hot)), (len(one_hot), 1, len(one_hot[0]), 1, 1))#, 1))#2*depth_distance))
 
 ##        LOAD MODEL
         try:
@@ -454,17 +439,16 @@ def run_model():
             model = load_model('model_pos')
             print "model read"
 #            one_hot = list(df['topic_rep'])
+            one_hot = np.array((pd.get_dummies(df['topic'])))
+            one_hot = np.reshape(np.ravel(np.ravel(one_hot)), (len(one_hot), 1, len(one_hot[0])))#2*depth_distance))
+            print "init one hot", one_hot[0:2]
 #            one_hot_test_global = list(df_test['topic_rep'])#(pd.get_dummies(df['topic']))
 #            one_hot_test_global = np.reshape(np.ravel(np.ravel(one_hot_test_global)), (len(one_hot_test_global), 1, len(one_hot_test_global[0])))#2*depth_distance))
-            print "init one hot", one_hot[0:2]
 
         except:
 #        Word model
             print "model not found!!"
-            tuple_x = X_train.shape#[1:] 
-            print tuple_x
             model_word = Sequential()
-<<<<<<< HEAD
             model_word.add(Bidirectional(LSTM(100, activation='tanh', return_sequences=True), input_shape=(max_words, X_train.shape[2])))
             model_word.add(Dropout(0.1))
 #            model_word.add(Bidirectional(LSTM(100, activation='tanh', return_sequences=True)))
@@ -488,72 +472,14 @@ def run_model():
     #        model_word.add(Flatten())
     #        model_word.add(MaxPooling2D(pool_size=(2, 1)))
     #        model_word.addDropout(0.1))
-=======
-#            model_word.add(Dense(max_words, input_shape=(X_train.shape[1], X_train.shape[2])))
-
-            model_word.add(TimeDistributed(Convolution2D(64, 3, 1, border_mode='same'), input_shape=X_train.shape[1:]))
-            model_word.add(Activation('relu'))
-            model_word.add(Dropout(0.25))
-#            model_word.add(TimeDistributed(Convolution2D(8, 4, 1, border_mode='same')))
-#            model_word.add(Activation('relu'))
-#            model_word.add(Dropout(0.25))
-            model_word.add(TimeDistributed(MaxPooling2D((4, 1))))
-            model_word.add(Activation('relu'))
-            model_word.add(Dropout(0.25))
-            model_word.add(TimeDistributed(Flatten()))
-            model_word.add(Activation('relu'))
-            model_word.add(Dropout(0.25))
-            model_word.add(Bidirectional(LSTM(max_words, return_sequences=True)))
-
-#            model_word.add(Bidirectional(LSTM(max_words, activation='relu', return_sequences=True)))
-#            model_word.add(Dropout(0.25))
-#            model_word.add(Bidirectional(LSTM(2 * max_words, activation='relu', return_sequences=True)))
-#            model_word.addDropout(0.25))
-#            model_word.add(Bidirectional(LSTM(max_words, activation='tanh', return_sequences=True)))
-#            model_word.addDropout(0.25))
-            
-            model_word_w = Sequential()
-            model_word_w.add(TimeDistributed(Convolution2D(64, 3, 1, border_mode='same'), input_shape=X_train_w.shape[1:]))
-            model_word_w.add(Activation('relu'))
-            model_word_w.add(Dropout(0.25))
-#            model_word_w.add(TimeDistributed(Convolution2D(8, 4, 1, border_mode='same')))
-#            model_word_w.add(Activation('relu'))
-#            model_word_w.add(Dropout(0.25))
-            model_word_w.add(TimeDistributed(MaxPooling2D((4, 1))))
-            model_word_w.add(Activation('relu'))
-            model_word_w.add(Dropout(0.25))
-            model_word_w.add(TimeDistributed(Flatten()))
-            model_word_w.add(Activation('relu'))
-            model_word_w.add(Dropout(0.25))
-            model_word_w.add(Bidirectional(LSTM(max_words, return_sequences=True)))#depth_embed)))
-
-#            model_word_w.add(Dropout(0.25))
-#            model_word_w.add(Bidirectional(LSTM(2 * max_words, activation='relu', return_sequences=True)))
-#            model_word_w.addDropout(0.25))
-#            model_word_w.add(Bidirectional(LSTM(2 * max_words, activation='relu', return_sequences=True)))
-#            model_word_w.addDropout(0.25))
-#            model_word_w.add(Bidirectional(LSTM(max_words, activation='tanh', return_sequences=True)))
-#            model_word_w.addDropout(0.25))
-    #        model_word.add(Bidirectional(LSTM(max_words, return_sequences=True)))
-    #        model_word.addDropout(0.25))
-    #        model_word.add(Flatten())
-    #        model_word.add(MaxPooling2D(pool_size=(2, 1)))
-    #        model_word.addDropout(0.25))
->>>>>>> d329ee88cd21cdff38a5b417bfc52b3c557946fc
 
     #        model_word.add(Dense((max_words), activation="tanh"))
             
     ##        Reverse
     #        model_word_r = Sequential()
-<<<<<<< HEAD
     #        model_word_r.add(LSTM(100, input_shape=(max_words, depth), consume_less='gpu', go_backwards=True))
     #        model_word_r.addDropout(0.1))
     ##        model_word_r.add(LSTM(100, input_shape=(max_words, depth), consume_less='gpu', go_backwards=True))
-=======
-    #        model_word_r.add(LSTM(max_words, input_shape=(max_words, depth), consume_less='gpu', go_backwards=True))
-    #        model_word_r.addDropout(0.25))
-    ##        model_word_r.add(LSTM(max_words, input_shape=(max_words, depth), consume_less='gpu', go_backwards=True))
->>>>>>> d329ee88cd21cdff38a5b417bfc52b3c557946fc
 
     #        Topic model
 
@@ -562,8 +488,12 @@ def run_model():
             print "set is", set(df['topic'])
 #            print "topic rep!! \n", df['topic_rep']        
 
-##            one_hot = list(df['topic_rep'])#(pd.get_dummies(df['topic']))
-##            one_hot = np.reshape(np.ravel(np.ravel(one_hot)), (len(one_hot), 1, len(one_hot[0])))
+            one_hot = np.array((pd.get_dummies(df['topic'])))
+            one_hot = np.reshape(np.ravel(np.ravel(one_hot)), (len(one_hot), 1, len(one_hot[0])))#2*depth_distance))
+
+
+#######            one_hot = list(df['topic_rep'])#(pd.get_dummies(df['topic']))
+#######            one_hot = np.reshape(np.ravel(np.ravel(one_hot)), (len(one_hot), 1, 2*depth_distance))
 
             print "init one hot", one_hot[0:2]
 #            one_hot = d#df['distance']
@@ -578,7 +508,6 @@ def run_model():
 #            one_hot_test_global = np.reshape(np.ravel(np.ravel(one_hot_test_global)), (len(one_hot_test_global), 1, 2*depth_distance))
 
             model_topic = Sequential()
-<<<<<<< HEAD
     #        , return_sequences=True
             model_topic.add(Bidirectional(LSTM(100, activation='tanh', return_sequences=True), input_shape=(1, one_hot_test.shape[2])))#2*depth_distance)))
             model_topic.add(Dropout(0.1))
@@ -591,53 +520,20 @@ def run_model():
 
     #        model_topic.add(Dense(4, activation="tanh"))
     #        model_topic.addDropout(0.1))
-=======
-            model_topic.add(TimeDistributed(Convolution2D(64, 3, 1, border_mode='same'), input_shape=one_hot_test.shape[1:]))
-            model_topic.add(Activation('relu'))
-            model_topic.add(Dropout(0.25))
-#            model_topic.add(TimeDistributed(Convolution2D(8, 4, 1, border_mode='same')))
-#            model_topic.add(Activation('relu'))
-#            model_topic.add(Dropout(0.25))
-            model_topic.add(TimeDistributed(MaxPooling2D((1, 1))))
-            model_topic.add(Activation('relu'))
-            model_topic.add(Dropout(0.25))
-            model_topic.add(TimeDistributed(Flatten()))
-            model_topic.add(Activation('relu'))
-            model_topic.add(Dropout(0.25))
-            model_topic.add(Bidirectional(LSTM(max_words, return_sequences=True)))
-#            model_topic.add(Bidirectional(LSTM(max_words, activation='tanh', return_sequences=True)))
-#            model_topic.add(Dropout(0.25))
-    #        model_topic.add(Bidirectional(LSTM(max_words, return_sequences=True)))
-    #        model_topic.add(Flatten())
-    #        model_topic.add(MaxPooling2D(pool_size=(2, 1)))
-    #        model_topic.addDropout(0.25))
-
-    #        model_topic.add(Dense(1, activation="tanh"))
-    #        model_topic.addDropout(0.25))
->>>>>>> d329ee88cd21cdff38a5b417bfc52b3c557946fc
 
     #        Merge forward and backward
     #        merged = Merge([model_word_f, model_word_r], mode='concat')#, concat_axis=1)
     #        model_word = Sequential()
     #        model_word.add(merged)
-<<<<<<< HEAD
     #        model_word.addDropout(0.1))
     ##        model_word.add(MaxPooling2D(pool_size=(2, 1)))
     ##        model_word.addDropout(0.1))
     #        model_word.add(LSTM(100, input_shape=(2*max_words, 1)))
     #        model_word.addDropout(0.1))
-=======
-    #        model_word.addDropout(0.25))
-    ##        model_word.add(MaxPooling2D(pool_size=(2, 1)))
-    ##        model_word.addDropout(0.25))
-    #        model_word.add(LSTM(max_words, input_shape=(2*max_words, 1)))
-    #        model_word.addDropout(0.25))
->>>>>>> d329ee88cd21cdff38a5b417bfc52b3c557946fc
     #        Merge merged and topic info
-            merged2 = Merge([model_word, model_word_w], mode='concat')
+            merged2 = Merge([model_word, model_word_w], mode='concat', concat_axis=1)
 #            merged2 = Merge([model_word, model_topic], mode='concat', concat_axis=1)
     #        merged = Concatenate([model_word, model_topic], axis=-1)
-<<<<<<< HEAD
             model2 = Sequential()
             model2.add(merged2)
 #            model.addDropout(0.1))
@@ -666,79 +562,27 @@ def run_model():
             model.add(Bidirectional(LSTM(100, activation='tanh')))#, return_sequences=True)))#)))
             model.add(Dropout(0.1))
             model.add(Dense(3, activation="softmax"))
-=======
-            model = Sequential()
-            model.add(merged2)
-            model.add(Dropout(0.25))
-            model.add(Bidirectional(LSTM(max_words, activation='relu', return_sequences=True)))#)))
-#            model.add(Dense(3*max_words, activation='relu'))#)))#)))
-#            model.add(Dropout(0.25))
-#            model.add(Bidirectional(LSTM(2*max_words, activation='tanh', return_sequences=True)))
-            merged3 = Merge([model, model_topic], mode='concat')
-#    ##      #  model.add(Flatten())
-#            model.addDropout(0.25))
-#    #        model.add(Bidirectional(LSTM(max_words), input_shape=(1 + max_words, 1)))
-#            print "added additional Dense, no flatten"
-###            model.add(Dense(max_words, activation='tanh'))
-##            model.addDropout(0.25))
-            model_new = Sequential()
-            model_new.add(merged3)
-            model_new.add(Dropout(0.25))
-#########            model.add(Bidirectional(LSTM(4, activation='relu')))#, return_sequences=True)))#)))
-#########            model.add(Dropout(0.25))
-
-#########            model_prior = Sequential()
-#########            model_prior.add(Bidirectional(LSTM(4, activation="relu"), input_shape=(X_train_prior.shape[1], 1)))
-#########            model_prior.add(Dropout(0.25))
-##########            #model.add(Dense(1, activation='linear', W_constraint=maxnorm(3)))
-##########            model.add(Bidirectional(LSTM(2*max_words, activation='relu', return_sequences=True)))#)))
-##########            model.addDropout(0.25))
-##############            model.add(Bidirectional(LSTM(2*max_words, activation='relu', return_sequences=True)))#)))
-##############            model.add(Dropout(0.25))
-##########            model.add(Bidirectional(LSTM(max_words, activation='relu')))#, return_sequences=True)))#)))
-##########            model.add(Dropout(0.25))
-
-#########            merged3 = Merge([model, model_prior], mode='concat', concat_axis=1) 
-#########            
-#########            model_new = Sequential()
-#########            model_new.add(merged3)
-
-            model_new.add(Bidirectional(LSTM(max_words, activation="relu")))
-#            model_new.add(Dropout(0.25))
-            model_new.add(Dense(3, activation="softmax"))
->>>>>>> d329ee88cd21cdff38a5b417bfc52b3c557946fc
 #            model.add(LSTM(1, activation="linear"))
     #        optimizer = RMSprop(lr=0.01)
     #        model.compile(loss='categorical_crossentropy', optimizer=optimizer)
             
-<<<<<<< HEAD
             adam = Adam(lr=0.0005, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
             model.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
-=======
-            adam = Adam(lr=0.0008, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
-            model_new.compile(loss='categorical_crossentropy', optimizer=adam, metrics=['accuracy'])
->>>>>>> d329ee88cd21cdff38a5b417bfc52b3c557946fc
             print "Custom!!!"
 #            model.compile(loss=custom_loss, optimizer=adam)
             print "came here saaaaar!!!!!!\n\n"
         #    print X[0:5]
         #    print Y_train[0:5]
             print "model changedd !!!"
-<<<<<<< HEAD
             model.fit([X_train, X_train_w, one_hot_train], y_train, batch_size=64, epochs=100, validation_split=0.05, callbacks=[history])
             model_json = model.to_json()
-=======
-            model_new.fit([X_train, X_train_w, one_hot_train], y_train, batch_size=64, epochs=50, validation_split=0.05, callbacks=[history])
-            
-            model_json = model_new.to_json()
->>>>>>> d329ee88cd21cdff38a5b417bfc52b3c557946fc
             with open("model_pos.json", "w") as json_file:
                 json_file.write(model_json)
-            model_new.save_weights("model_pos.h5")
+            model.save_weights("model_pos.h5")
             print("Saved model to disk")
     #        print(history.History)
 
-        return [model_new, X, X_w, X_test_global, X_w_test_global, y, y_test_global, df, df_test, d, one_hot, one_hot_test_global]#, X_train_prior, X_test_prior]
+        return [model, X, X_w, X_test_global, X_w_test_global, y, y_test_global, df, df_test, d, one_hot, one_hot_test_global]
 #        print X.shape
 #        print X[0]
 #        print X[0]
@@ -775,7 +619,7 @@ def sentiment_classifier():
     except Exception, e:
         print "Caught an exception\n\n"
         print "Error is", str(e), "\n\n"
-        [model, X, X_w, X_test_global, X_w_test_global, y, y_test_global, df, df_test, d, one_hot, one_hot_test_global] = run_model() #, X_train_prior, X_test_prior
+        [model, X, X_w, X_test_global, X_w_test_global, y, y_test_global, df, df_test, d, one_hot, one_hot_test_global] = run_model()
         
     print len(X_test_global), len(X_w_test_global), len(one_hot_test_global)
     print "length of X is", len(X)
@@ -810,7 +654,7 @@ def sentiment_classifier():
 
     pred = model.predict([X_test, X_test_w, one_hot_test], batch_size = 64)#, Y_train, batch_size=32, verbose=1, sample_weight=None)
 #    print X_test[0]
-#    print one_hot_test[0:5]
+#    print X_test_w[0]
     print pred[0:5]
     print y_test[0:5]
     thresholded_pred = pred.argmax(axis=1)
@@ -843,9 +687,9 @@ def sentiment_classifier():
 #########    y[y >= 0.1] = 1
 #########    y[y < 0.1] = 0
 ########    pred.shape = (pred.shape[0],)
-########    print pred[0:12200]
+########    print pred[0:20]
 ########    print "true labels"
-########    print y_test[0:12200]
+########    print y_test[0:20]
 #########    print sum(sum(y == Y_train))
 #########    print (len(X_train) * len(X_train[0]))
 ########    print (sum(abs(y_test - pred))) / float(len(pred))
@@ -875,7 +719,8 @@ def sentiment_classifier():
 
     pred = model.predict([X_train, X_train_w, one_hot_train], batch_size = 64)#, Y_train, batch_size=32, verbose=1, sample_weight=None)
 #    print X_train[0]
-#    print one_hot_train[0:5]
+#    print X_train_w[0]
+
     print pred[0:5]
     print y_train[0:5]
     #pred[:,0] *= 1.5
@@ -884,9 +729,9 @@ def sentiment_classifier():
 ####    y[y >= 0.1] = 1
 ####    y[y < 0.1] = 0
 ####    pred.shape = (pred.shape[0],)
-####    print pred[0:12200]
+####    print pred[0:20]
 ####    print "true labels"
-####    print y_train[0:12200]
+####    print y_train[0:20]
 #####    print sum(sum(y == Y_train))
 #####    print (len(X_train) * len(X_train[0]))
 ####    print (sum(abs(y_train - pred))) / float(len(pred))
@@ -920,7 +765,7 @@ def sentiment_classifier():
 ##                                  [model.layers[2].output])
 
 ### output in train mode = 0
-###    layer_output = np.array(get_last_layer_output([X_train[0:1122000], 0])[0])
+###    layer_output = np.array(get_last_layer_output([X_train[0:1200], 0])[0])
 ##    
 ### output in train mode = 0
 ##    
